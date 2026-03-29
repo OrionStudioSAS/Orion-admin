@@ -90,11 +90,11 @@ export default function FlowsManager({ flows }: Props) {
   }
 
   const formContent = (
-    <form onSubmit={editingId ? handleUpdate : handleCreate} className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 mb-6">
+    <form onSubmit={editingId ? handleUpdate : handleCreate} className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-4 md:p-6 mb-6">
       <h3 className="text-sm font-semibold text-white mb-5">
         {editingId ? 'Modifier le flow' : 'Créer un flow'}
       </h3>
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Nom *</label>
           <input
@@ -116,7 +116,7 @@ export default function FlowsManager({ flows }: Props) {
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Webhook URL *</label>
           <input
             type="url"
@@ -127,7 +127,7 @@ export default function FlowsManager({ flows }: Props) {
             className="w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Description</label>
           <textarea
             value={form.description}
@@ -206,7 +206,7 @@ export default function FlowsManager({ flows }: Props) {
         {flows.map((flow) => (
           <div key={flow.id}>
             {editingId === flow.id ? formContent : (
-              <div className="flex items-center gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl px-5 py-4 hover:border-white/10 transition-colors">
+              <div className="flex items-center gap-2 md:gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl px-3 md:px-5 py-3 md:py-4 hover:border-white/10 transition-colors">
                 <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                   <FlowIcon icon={flow.icon} className="w-4 h-4 text-white" />
                 </div>
