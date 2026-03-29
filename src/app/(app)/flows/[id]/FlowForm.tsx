@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Flow, FormField } from '@/types/database'
 import { CheckIcon, XIcon, BoltIcon } from '@/components/ui/Icons'
+import { logExecution } from '@/app/actions/executions'
 
 interface Props {
   flow: Flow
@@ -16,7 +16,6 @@ export default function FlowForm({ flow, userId }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   const fields = (flow.form_schema as unknown as FormField[]) || []
 
@@ -30,7 +29,6 @@ export default function FlowForm({ flow, userId }: Props) {
     setMessage('')
 
     try {
-      // Call N8N webhook
       const response = await fetch(flow.webhook_url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,13 +39,11 @@ export default function FlowForm({ flow, userId }: Props) {
       let responseData: unknown = {}
       try { responseData = await response.json() } catch {}
 
-      // Log execution
-      await supabase.from('flow_executions').insert({
+      await logExecution({
         flow_id: flow.id,
-        profile_id: userId,
         status: isOk ? 'success' : 'error',
         payload: values,
-        response: responseData as Record<string, unknown>,
+        response: responseData,
       })
 
       if (isOk) {
@@ -60,13 +56,12 @@ export default function FlowForm({ flow, userId }: Props) {
         setMessage('Une erreur est survenue lors du déclenchement.')
       }
     } catch {
-      await supabase.from('flow_executions').insert({
+      await logExecution({
         flow_id: flow.id,
-        profile_id: userId,
         status: 'error',
         payload: values,
         response: { error: 'Network error' },
-      })
+      }).catch(() => {})
       setStatus('error')
       setMessage('Impossible de joindre le webhook. Vérifiez votre connexion.')
     }
@@ -110,7 +105,7 @@ export default function FlowForm({ flow, userId }: Props) {
               required={field.required}
               className="w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-white/30 transition-colors appearance-none"
             >
-              <option value="" className="text-[#3f3f46]">Sélectionner...</option>
+              <option value="">Sélectionner...</option>
               {field.options?.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}

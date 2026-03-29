@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Flow } from '@/types/database'
 import { PlusIcon, EditIcon, TrashIcon, BoltIcon, FlowIcon, CheckIcon, XIcon } from '@/components/ui/Icons'
+import { createFlow, updateFlow, toggleFlowActive, deleteFlow } from '@/app/actions/flows'
 
 interface Props {
   flows: Flow[]
@@ -29,8 +28,6 @@ export default function FlowsManager({ flows }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
-  const supabase = createClient()
 
   function startEdit(flow: Flow) {
     setEditingId(flow.id)
@@ -56,19 +53,13 @@ export default function FlowsManager({ flows }: Props) {
     e.preventDefault()
     setLoading(true)
     setError('')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('flows').insert({
-      name: form.name,
-      description: form.description || null,
-      webhook_url: form.webhook_url,
-      category: form.category,
-      icon: form.icon,
-      is_active: form.is_active,
-    })
-    if (error) { setError(error.message); setLoading(false); return }
-    cancelForm()
+    try {
+      await createFlow(form)
+      cancelForm()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+    }
     setLoading(false)
-    startTransition(() => router.refresh())
   }
 
   async function handleUpdate(e: React.FormEvent) {
@@ -76,30 +67,26 @@ export default function FlowsManager({ flows }: Props) {
     if (!editingId) return
     setLoading(true)
     setError('')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('flows').update({
-      name: form.name,
-      description: form.description || null,
-      webhook_url: form.webhook_url,
-      category: form.category,
-      icon: form.icon,
-      is_active: form.is_active,
-    }).eq('id', editingId)
-    if (error) { setError(error.message); setLoading(false); return }
-    cancelForm()
+    try {
+      await updateFlow(editingId, form)
+      cancelForm()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+    }
     setLoading(false)
-    startTransition(() => router.refresh())
   }
 
-  async function handleToggleActive(flow: Flow) {
-    await supabase.from('flows').update({ is_active: !flow.is_active }).eq('id', flow.id)
-    startTransition(() => router.refresh())
+  function handleToggleActive(flow: Flow) {
+    startTransition(async () => {
+      await toggleFlowActive(flow.id, flow.is_active)
+    })
   }
 
   async function handleDelete(flowId: string) {
     if (!confirm('Supprimer ce flow définitivement ?')) return
-    await supabase.from('flows').delete().eq('id', flowId)
-    startTransition(() => router.refresh())
+    startTransition(async () => {
+      await deleteFlow(flowId)
+    })
   }
 
   const formContent = (
@@ -181,9 +168,7 @@ export default function FlowsManager({ flows }: Props) {
       </div>
 
       {error && (
-        <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 mb-4">
-          {error}
-        </div>
+        <div className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3 mb-4">{error}</div>
       )}
 
       <div className="flex gap-3">

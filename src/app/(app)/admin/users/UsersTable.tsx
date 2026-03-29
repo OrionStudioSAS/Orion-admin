@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Profile, FlowAccess } from '@/types/database'
-import { PlusIcon, TrashIcon, CheckIcon, XIcon, EditIcon, KeyIcon } from '@/components/ui/Icons'
+import { PlusIcon, EditIcon, CheckIcon, XIcon, KeyIcon } from '@/components/ui/Icons'
+import { updateUserRole, grantFlowAccess, revokeFlowAccess } from '@/app/actions/users'
 
 interface Props {
   profiles: Profile[]
@@ -17,10 +16,6 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
   const [showCreate, setShowCreate] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
-  const supabase = createClient()
-
-  // Create user form state
   const [newUser, setNewUser] = useState({ email: '', full_name: '', password: '', role: 'client' as 'admin' | 'client' })
   const [createError, setCreateError] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
@@ -46,22 +41,23 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
     setNewUser({ email: '', full_name: '', password: '', role: 'client' })
     setShowCreate(false)
     setCreateLoading(false)
-    startTransition(() => router.refresh())
+    startTransition(() => { window.location.reload() })
   }
 
-  async function handleRoleChange(profileId: string, newRole: 'admin' | 'client') {
-    await supabase.from('profiles').update({ role: newRole }).eq('id', profileId)
-    startTransition(() => router.refresh())
+  function handleRoleChange(profileId: string, newRole: 'admin' | 'client') {
+    startTransition(async () => {
+      await updateUserRole(profileId, newRole)
+    })
   }
 
-  async function handleToggleAccess(profileId: string, flowId: string, hasAccess: boolean) {
-    if (hasAccess) {
-      await supabase.from('flow_access').delete()
-        .eq('profile_id', profileId).eq('flow_id', flowId)
-    } else {
-      await supabase.from('flow_access').insert({ profile_id: profileId, flow_id: flowId })
-    }
-    startTransition(() => router.refresh())
+  function handleToggleAccess(profileId: string, flowId: string, hasAccess: boolean) {
+    startTransition(async () => {
+      if (hasAccess) {
+        await revokeFlowAccess(profileId, flowId)
+      } else {
+        await grantFlowAccess(profileId, flowId)
+      }
+    })
   }
 
   function getUserAccess(profileId: string) {
@@ -70,7 +66,6 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
 
   return (
     <div>
-      {/* Header row */}
       <div className="flex items-center justify-between mb-5">
         <span className="text-sm text-[#71717a]">{profiles.length} utilisateur{profiles.length > 1 ? 's' : ''}</span>
         <button
@@ -82,7 +77,6 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
         </button>
       </div>
 
-      {/* Create form */}
       {showCreate && (
         <form onSubmit={handleCreateUser} className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 mb-6">
           <h3 className="text-sm font-semibold text-white mb-5">Créer un utilisateur</h3>
@@ -146,18 +140,13 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
               <KeyIcon className="w-3.5 h-3.5" />
               {createLoading ? 'Création...' : 'Créer le compte'}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-              className="text-[#71717a] text-xs px-4 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
-            >
+            <button type="button" onClick={() => setShowCreate(false)} className="text-[#71717a] text-xs px-4 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">
               Annuler
             </button>
           </div>
         </form>
       )}
 
-      {/* Users list */}
       <div className="space-y-3">
         {profiles.map((profile) => {
           const userAccess = getUserAccess(profile.id)
@@ -165,11 +154,7 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
           const isCurrentUser = profile.id === currentUserId
 
           return (
-            <div
-              key={profile.id}
-              className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden"
-            >
-              {/* User row */}
+            <div key={profile.id} className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
               <div className="flex items-center gap-4 px-5 py-4">
                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
                   <span className="text-xs font-semibold text-white uppercase">
@@ -184,9 +169,8 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
                   <div className="text-xs text-[#71717a]">{profile.email}</div>
                 </div>
 
-                {/* Role selector */}
                 <select
-                  value={profile.role}
+                  defaultValue={profile.role}
                   onChange={e => handleRoleChange(profile.id, e.target.value as 'admin' | 'client')}
                   disabled={isCurrentUser || isPending}
                   className="bg-[#080808] border border-[#1e1e1e] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-white/30 disabled:opacity-40 transition-colors"
@@ -195,7 +179,6 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
                   <option value="admin">Admin</option>
                 </select>
 
-                {/* Edit access button */}
                 <button
                   onClick={() => setEditingId(isEditing ? null : profile.id)}
                   className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all
@@ -206,7 +189,6 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
                 </button>
               </div>
 
-              {/* Flow access panel */}
               {isEditing && (
                 <div className="border-t border-[#1e1e1e] px-5 py-4 bg-[#080808]">
                   <div className="text-xs text-[#71717a] mb-3 uppercase tracking-widest font-medium">Flows accessibles</div>
@@ -229,9 +211,7 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
                         </button>
                       )
                     })}
-                    {flows.length === 0 && (
-                      <span className="text-[#3f3f46] text-xs">Aucun flow disponible.</span>
-                    )}
+                    {flows.length === 0 && <span className="text-[#3f3f46] text-xs">Aucun flow disponible.</span>}
                   </div>
                 </div>
               )}
