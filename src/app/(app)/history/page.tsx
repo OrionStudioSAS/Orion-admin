@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { CheckIcon, XIcon, StarIcon } from '@/components/ui/Icons'
 
 export default async function HistoryPage() {
@@ -7,13 +8,15 @@ export default async function HistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  let query = supabase
+  let query = admin
     .from('flow_executions')
     .select('*, flows(name, icon, category)')
     .order('executed_at', { ascending: false })
@@ -54,7 +57,6 @@ export default async function HistoryPage() {
                 key={exec.id}
                 className="flex items-center gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-xl px-5 py-4 hover:border-white/10 transition-colors"
               >
-                {/* Status */}
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0
                   ${exec.status === 'success'
                     ? 'bg-green-500/10 border border-green-500/20'
@@ -70,7 +72,6 @@ export default async function HistoryPage() {
                   }
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">
                     {flow?.name || 'Flow supprimé'}
@@ -80,7 +81,6 @@ export default async function HistoryPage() {
                   )}
                 </div>
 
-                {/* Status badge */}
                 <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium uppercase tracking-wider
                   ${exec.status === 'success'
                     ? 'text-green-400 bg-green-500/10'
@@ -91,7 +91,6 @@ export default async function HistoryPage() {
                   {exec.status}
                 </span>
 
-                {/* Date */}
                 <div className="text-[#3f3f46] text-xs shrink-0 text-right">
                   <div>{date.toLocaleDateString('fr-FR')}</div>
                   <div className="text-[#2a2a2a]">{date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>

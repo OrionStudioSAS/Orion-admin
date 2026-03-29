@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import FlowForm from './FlowForm'
 import { FlowIcon, StarIcon } from '@/components/ui/Icons'
 
@@ -13,14 +14,15 @@ export default async function FlowPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  // Check access
-  const { data: flow } = await supabase
+  const { data: flow } = await admin
     .from('flows')
     .select('*')
     .eq('id', id)
@@ -31,7 +33,7 @@ export default async function FlowPage({ params }: Props) {
 
   // Clients must have explicit access
   if (profile?.role !== 'admin') {
-    const { data: access } = await supabase
+    const { data: access } = await admin
       .from('flow_access')
       .select('id')
       .eq('flow_id', id)
@@ -42,14 +44,12 @@ export default async function FlowPage({ params }: Props) {
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 text-xs text-[#3f3f46]">
         <span>Flows</span>
         <span>/</span>
         <span className="text-[#71717a]">{flow.name}</span>
       </div>
 
-      {/* Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
           <FlowIcon icon={flow.icon} className="w-5 h-5 text-white" />
@@ -70,7 +70,6 @@ export default async function FlowPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Form */}
       <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-6">
         <div className="mb-6">
           <h2 className="text-sm font-medium text-white mb-1">Paramètres</h2>
