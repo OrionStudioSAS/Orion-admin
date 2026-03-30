@@ -76,8 +76,24 @@ export default function ChatWindow({ profileId, isAdmin, initialMessages }: Prop
     if (!input.trim() || isPending) return
     const content = input.trim()
     setInput('')
+
+    // Mise à jour optimiste — affiche le message immédiatement
+    const tempMsg: SupportMessage = {
+      id: `temp-${Date.now()}`,
+      profile_id: profileId,
+      sender_id: '',
+      content,
+      is_admin_sender: isAdmin,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, tempMsg])
+
     startTransition(async () => {
       await sendMessage(content, profileId)
+      // Sync depuis la DB pour remplacer le message temporaire par le vrai
+      const fresh = await getMessages(profileId)
+      setMessages(fresh)
     })
   }
 
