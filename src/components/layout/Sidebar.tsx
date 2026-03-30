@@ -1,20 +1,29 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, BoltIcon, LogOutIcon, StarIcon } from '@/components/ui/Icons'
+import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon } from '@/components/ui/Icons'
 
 interface SidebarProps {
   profile: Profile
 }
 
+function MenuIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export default function Sidebar({ profile }: SidebarProps) {
+  const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-
   const isAdmin = profile.role === 'admin'
 
   const navItems = [
@@ -29,15 +38,24 @@ export default function Sidebar({ profile }: SidebarProps) {
     router.refresh()
   }
 
-  return (
-    <aside className="fixed left-0 top-0 h-full w-60 flex flex-col border-r border-[#1e1e1e] bg-[#080808] z-10">
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-[#1e1e1e]">
-        <LogoIcon className="w-7 h-7 shrink-0" />
-        <div>
-          <div className="text-sm font-semibold tracking-wide text-white">Orion Studio</div>
-          <div className="text-[11px] text-[#71717a] mt-0.5">Automations</div>
+      <div className="flex items-center justify-between px-6 py-6 border-b border-[#1e1e1e]">
+        <div className="flex items-center gap-3">
+          <LogoIcon className="w-7 h-7 shrink-0" />
+          <div>
+            <div className="text-sm font-semibold tracking-wide text-white">Orion Studio</div>
+            <div className="text-[11px] text-[#71717a] mt-0.5">Automations</div>
+          </div>
         </div>
+        {/* Close button mobile */}
+        <button
+          onClick={() => setOpen(false)}
+          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+        >
+          <XIcon className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Nav */}
@@ -51,6 +69,7 @@ export default function Sidebar({ profile }: SidebarProps) {
             <Link
               key={href}
               href={href}
+              onClick={() => setOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-all duration-150 group
                 ${active
                   ? 'bg-white text-black font-medium'
@@ -65,7 +84,7 @@ export default function Sidebar({ profile }: SidebarProps) {
         })}
       </nav>
 
-      {/* User + logout */}
+      {/* User */}
       <div className="border-t border-[#1e1e1e] p-4">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
@@ -74,18 +93,13 @@ export default function Sidebar({ profile }: SidebarProps) {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-white truncate">
-              {profile.full_name || 'Utilisateur'}
-            </div>
+            <div className="text-sm font-medium text-white truncate">{profile.full_name || 'Utilisateur'}</div>
             <div className="text-[11px] text-[#71717a] truncate">{profile.email}</div>
           </div>
         </div>
         <div className="flex items-center justify-between">
           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium tracking-wider uppercase
-            ${isAdmin
-              ? 'border-white/20 text-white/60 bg-white/5'
-              : 'border-[#1e1e1e] text-[#71717a]'
-            }`}>
+            ${isAdmin ? 'border-white/20 text-white/60 bg-white/5' : 'border-[#1e1e1e] text-[#71717a]'}`}>
             {isAdmin ? 'Admin' : 'Client'}
           </span>
           <button
@@ -97,6 +111,43 @@ export default function Sidebar({ profile }: SidebarProps) {
           </button>
         </div>
       </div>
-    </aside>
+    </div>
+  )
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 h-14 bg-[#080808] border-b border-[#1e1e1e]">
+        <div className="flex items-center gap-3">
+          <LogoIcon className="w-6 h-6" />
+          <span className="text-sm font-semibold text-white">Orion Studio</span>
+        </div>
+        <button
+          onClick={() => setOpen(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+        >
+          <MenuIcon className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Overlay mobile */}
+      {open && (
+        <div
+          className="lg:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Sidebar desktop */}
+      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 flex-col border-r border-[#1e1e1e] bg-[#080808] z-10">
+        {sidebarContent}
+      </aside>
+
+      {/* Sidebar mobile drawer */}
+      <aside className={`lg:hidden fixed left-0 top-0 h-full w-72 flex flex-col border-r border-[#1e1e1e] bg-[#080808] z-40 transition-transform duration-300
+        ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+        {sidebarContent}
+      </aside>
+    </>
   )
 }

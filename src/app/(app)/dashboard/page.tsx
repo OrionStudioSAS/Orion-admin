@@ -11,27 +11,14 @@ export default async function DashboardPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .single()
+  const { data: profile } = await admin.from('profiles').select('role, full_name').eq('id', user.id).single()
 
   let flows: Flow[] = []
-
   if (profile?.role === 'admin') {
-    const { data } = await admin
-      .from('flows')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at')
+    const { data } = await admin.from('flows').select('*').eq('is_active', true).order('created_at')
     flows = data || []
   } else {
-    const { data } = await admin
-      .from('flow_access')
-      .select('flows(*)')
-      .eq('profile_id', user.id)
+    const { data } = await admin.from('flow_access').select('flows(*)').eq('profile_id', user.id)
     flows = (data?.map((d: { flows: unknown }) => d.flows).filter(Boolean) as Flow[]) || []
   }
 
@@ -40,15 +27,13 @@ export default async function DashboardPage() {
   const firstName = profile?.full_name?.split(' ')[0] || 'toi'
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-10">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
           <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
           <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Automations</span>
         </div>
-        <h1 className="text-3xl font-semibold text-white">
-          {greeting}, {firstName}
-        </h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-white">{greeting}, {firstName}</h1>
         <p className="text-[#71717a] text-sm mt-2">
           {flows.length === 0
             ? "Aucun flow disponible pour le moment."
@@ -57,15 +42,13 @@ export default async function DashboardPage() {
       </div>
 
       {flows.length === 0 ? (
-        <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-16 text-center">
+        <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
           <p className="text-[#3f3f46] text-sm">Aucun flow ne vous a encore été assigné.</p>
           <p className="text-[#3f3f46] text-xs mt-1">Contactez votre administrateur.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {flows.map((flow) => (
-            <FlowCard key={flow.id} flow={flow} />
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {flows.map((flow) => <FlowCard key={flow.id} flow={flow} />)}
         </div>
       )}
     </div>
@@ -76,19 +59,17 @@ function FlowCard({ flow }: { flow: Flow }) {
   return (
     <Link
       href={`/flows/${flow.id}`}
-      className="group relative flex flex-col bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-6 hover:border-white/20 hover:bg-[#141414] transition-all duration-200"
+      className="group relative flex flex-col bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5 md:p-6 hover:border-white/20 hover:bg-[#141414] transition-all duration-200"
     >
-      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-5 group-hover:bg-white/10 transition-colors">
-        <FlowIcon icon={flow.icon} className="w-4.5 h-4.5 text-white" />
+      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 md:mb-5 group-hover:bg-white/10 transition-colors">
+        <FlowIcon icon={flow.icon} className="w-4 h-4 text-white" />
       </div>
       {flow.category && (
-        <span className="text-[10px] text-[#3f3f46] uppercase tracking-widest font-medium mb-2">
-          {flow.category}
-        </span>
+        <span className="text-[10px] text-[#3f3f46] uppercase tracking-widest font-medium mb-2">{flow.category}</span>
       )}
       <h3 className="text-sm font-semibold text-white mb-2">{flow.name}</h3>
       {flow.description && (
-        <p className="text-[#71717a] text-xs leading-relaxed mb-5 flex-1">{flow.description}</p>
+        <p className="text-[#71717a] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{flow.description}</p>
       )}
       <div className="flex items-center gap-2 text-xs text-[#71717a] group-hover:text-white transition-colors mt-auto">
         <span>Lancer le flow</span>

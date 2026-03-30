@@ -78,9 +78,9 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
       </div>
 
       {showCreate && (
-        <form onSubmit={handleCreateUser} className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 mb-6">
+        <form onSubmit={handleCreateUser} className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-4 md:p-6 mb-6">
           <h3 className="text-sm font-semibold text-white mb-5">Créer un utilisateur</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Nom complet</label>
               <input
@@ -155,7 +155,7 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
 
           return (
             <div key={profile.id} className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-4 px-5 py-4">
+              <div className="flex items-center gap-2 md:gap-4 px-3 md:px-5 py-3 md:py-4">
                 <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
                   <span className="text-xs font-semibold text-white uppercase">
                     {(profile.full_name || profile.email)[0]}

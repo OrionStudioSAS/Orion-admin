@@ -10,31 +10,21 @@ export default async function AdminFlowsPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect('/dashboard')
 
-  const { data: flows } = await admin
-    .from('flows')
-    .select('*')
-    .order('created_at')
+  const { data: flows } = await admin.from('flows').select('*').order('created_at')
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="mb-10">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
           <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
           <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Administration</span>
         </div>
-        <h1 className="text-3xl font-semibold text-white">Flows N8N</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-white">Flows N8N</h1>
         <p className="text-[#71717a] text-sm mt-2">Gérez vos workflows et leurs webhooks</p>
       </div>
-
       <FlowsManager flows={flows || []} />
     </div>
   )
