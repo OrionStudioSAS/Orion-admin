@@ -72,7 +72,11 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           <span className="text-[10px] font-medium tracking-widest text-[#3f3f46] uppercase">Navigation</span>
         </div>
         {navItems.map(({ href, icon: Icon, label, badge }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
+          const active = pathname === href || (
+            href !== '/admin'
+              ? pathname.startsWith(href + '/')
+              : pathname.startsWith('/admin/') && !pathname.startsWith('/admin/chat')
+          )
           const hasBadge = badge && badge > 0
           return (
             <Link
