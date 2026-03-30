@@ -166,7 +166,10 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
                     {profile.full_name || '—'}
                     {isCurrentUser && <span className="ml-2 text-[10px] text-[#3f3f46]">(vous)</span>}
                   </div>
-                  <div className="text-xs text-[#71717a]">{profile.email}</div>
+                  <div className="text-xs text-[#71717a]">
+                    {profile.email}
+                    {profile.company && <span className="ml-2 text-[#3f3f46]">· {profile.company}</span>}
+                  </div>
                 </div>
 
                 <select

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon } from '@/components/ui/Icons'
+import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon } from '@/components/ui/Icons'
 
 interface SidebarProps {
   profile: Profile
@@ -95,17 +95,24 @@ export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarPr
 
       {/* User */}
       <div className="border-t border-[#1e1e1e] p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+        <Link
+          href="/profile"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-3 mb-3 group"
+        >
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
             <span className="text-xs font-semibold text-white uppercase">
               {(profile.full_name || profile.email)[0]}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-white truncate">{profile.full_name || 'Utilisateur'}</div>
+            <div className="text-sm font-medium text-white truncate group-hover:text-white/80 transition-colors">
+              {profile.full_name || 'Utilisateur'}
+            </div>
             <div className="text-[11px] text-[#71717a] truncate">{profile.email}</div>
           </div>
-        </div>
+          <UserCircleIcon className="w-3.5 h-3.5 text-[#3f3f46] group-hover:text-[#71717a] transition-colors shrink-0" />
+        </Link>
         <div className="flex items-center justify-between">
           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium tracking-wider uppercase
             ${isAdmin ? 'border-white/20 text-white/60 bg-white/5' : 'border-[#1e1e1e] text-[#71717a]'}`}>

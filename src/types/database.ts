@@ -9,6 +9,10 @@ export interface Database {
           email: string
           full_name: string | null
           role: 'admin' | 'client'
+          company: string | null
+          website: string | null
+          webflow_site: string | null
+          phone: string | null
           created_at: string
           updated_at: string
         }
@@ -17,6 +21,10 @@ export interface Database {
           email: string
           full_name?: string | null
           role?: 'admin' | 'client'
+          company?: string | null
+          website?: string | null
+          webflow_site?: string | null
+          phone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -25,6 +33,10 @@ export interface Database {
           email?: string
           full_name?: string | null
           role?: 'admin' | 'client'
+          company?: string | null
+          website?: string | null
+          webflow_site?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
