@@ -87,6 +87,27 @@ export interface Database {
         }
         Relationships: []
       }
+      access_requests: {
+        Row: {
+          id: string
+          profile_id: string
+          flow_id: string
+          status: 'pending' | 'approved' | 'rejected'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          flow_id: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          status?: 'pending' | 'approved' | 'rejected'
+        }
+        Relationships: []
+      }
       flow_executions: {
         Row: {
           id: string
@@ -137,3 +158,4 @@ export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Flow = Database['public']['Tables']['flows']['Row']
 export type FlowAccess = Database['public']['Tables']['flow_access']['Row']
 export type FlowExecution = Database['public']['Tables']['flow_executions']['Row']
+export type AccessRequest = Database['public']['Tables']['access_requests']['Row']

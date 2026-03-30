@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon } from '@/components/ui/Icons'
 import UsersTable from './UsersTable'
+import AccessRequestsPanel from './AccessRequestsPanel'
 
 export default async function AdminUsersPage() {
   const supabase = await createClient()
@@ -13,11 +14,14 @@ export default async function AdminUsersPage() {
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect('/dashboard')
 
-  const [{ data: profiles }, { data: flows }, { data: allAccess }] = await Promise.all([
+  const [{ data: profiles }, { data: flows }, { data: allAccess }, { data: requests }] = await Promise.all([
     admin.from('profiles').select('*').order('created_at', { ascending: false }),
     admin.from('flows').select('id, name').eq('is_active', true),
     admin.from('flow_access').select('*'),
+    admin.from('access_requests').select('*, profiles(full_name, email), flows(name)').eq('status', 'pending').order('created_at', { ascending: false }),
   ])
+
+  const pendingCount = requests?.length || 0
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -29,6 +33,14 @@ export default async function AdminUsersPage() {
         <h1 className="text-2xl md:text-3xl font-semibold text-white">Utilisateurs</h1>
         <p className="text-[#71717a] text-sm mt-2">Gérez les accès et les rôles</p>
       </div>
+
+      {pendingCount > 0 && (
+        <div className="mb-8">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <AccessRequestsPanel requests={requests as any[]} />
+        </div>
+      )}
+
       <UsersTable profiles={profiles || []} flows={flows || []} accessList={allAccess || []} currentUserId={user.id} />
     </div>
   )

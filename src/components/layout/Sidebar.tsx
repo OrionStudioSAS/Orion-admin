@@ -9,6 +9,7 @@ import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon
 
 interface SidebarProps {
   profile: Profile
+  pendingRequestsCount?: number
 }
 
 function MenuIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -19,7 +20,7 @@ function MenuIcon({ className = 'w-5 h-5' }: { className?: string }) {
   )
 }
 
-export default function Sidebar({ profile }: SidebarProps) {
+export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
@@ -78,7 +79,15 @@ export default function Sidebar({ profile }: SidebarProps) {
             >
               <Icon className="w-4 h-4 shrink-0" />
               <span>{label}</span>
-              {active && <StarIcon className="ml-auto w-2 h-2 text-black/40" />}
+              {active && !( href === '/admin' && pendingRequestsCount > 0) && (
+                <StarIcon className="ml-auto w-2 h-2 text-black/40" />
+              )}
+              {href === '/admin' && pendingRequestsCount > 0 && (
+                <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
+                  ${active ? 'bg-black/20 text-black' : 'bg-white text-black'}`}>
+                  {pendingRequestsCount}
+                </span>
+              )}
             </Link>
           )
         })}

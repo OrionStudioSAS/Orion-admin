@@ -148,6 +148,23 @@ export function KeyIcon({ className = "w-5 h-5" }: { className?: string }) {
   )
 }
 
+export function LockIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function BellIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 const iconMap: Record<string, React.FC<{ className?: string }>> = {
   bolt: BoltIcon,
   document: DocumentIcon,

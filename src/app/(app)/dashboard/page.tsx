@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Flow } from '@/types/database'
-import { FlowIcon, ArrowRightIcon, StarIcon } from '@/components/ui/Icons'
+import { FlowIcon, ArrowRightIcon, StarIcon, LockIcon } from '@/components/ui/Icons'
+import RequestAccessButton from '@/components/ui/RequestAccessButton'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -13,18 +14,29 @@ export default async function DashboardPage() {
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('role, full_name').eq('id', user.id).single()
 
-  let flows: Flow[] = []
-  if (profile?.role === 'admin') {
-    const { data } = await admin.from('flows').select('*').eq('is_active', true).order('created_at')
-    flows = data || []
-  } else {
-    const { data } = await admin.from('flow_access').select('flows(*)').eq('profile_id', user.id)
-    flows = (data?.map((d: { flows: unknown }) => d.flows).filter(Boolean) as Flow[]) || []
+  // Tous les flows actifs
+  const { data: allFlows } = await admin.from('flows').select('*').eq('is_active', true).order('created_at')
+  const flows: Flow[] = allFlows || []
+
+  let accessFlowIds: string[] = []
+  let requestedFlowIds: string[] = []
+
+  if (profile?.role !== 'admin') {
+    // Flows auxquels le client a accès
+    const { data: accessRows } = await admin.from('flow_access').select('flow_id').eq('profile_id', user.id)
+    accessFlowIds = accessRows?.map(r => r.flow_id) || []
+
+    // Flows déjà demandés (pending ou rejected)
+    const { data: requestRows } = await admin.from('access_requests').select('flow_id').eq('profile_id', user.id).eq('status', 'pending')
+    requestedFlowIds = requestRows?.map(r => r.flow_id) || []
   }
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir'
   const firstName = profile?.full_name?.split(' ')[0] || 'toi'
+
+  const isAdmin = profile?.role === 'admin'
+  const accessibleCount = isAdmin ? flows.length : accessFlowIds.length
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -37,18 +49,25 @@ export default async function DashboardPage() {
         <p className="text-[#71717a] text-sm mt-2">
           {flows.length === 0
             ? "Aucun flow disponible pour le moment."
-            : `${flows.length} flow${flows.length > 1 ? 's' : ''} disponible${flows.length > 1 ? 's' : ''}`}
+            : `${accessibleCount} flow${accessibleCount > 1 ? 's' : ''} accessible${accessibleCount > 1 ? 's' : ''}${!isAdmin && flows.length > accessibleCount ? ` · ${flows.length - accessibleCount} verrouillé${flows.length - accessibleCount > 1 ? 's' : ''}` : ''}`}
         </p>
       </div>
 
       {flows.length === 0 ? (
         <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
-          <p className="text-[#3f3f46] text-sm">Aucun flow ne vous a encore été assigné.</p>
-          <p className="text-[#3f3f46] text-xs mt-1">Contactez votre administrateur.</p>
+          <p className="text-[#3f3f46] text-sm">Aucun flow disponible pour le moment.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {flows.map((flow) => <FlowCard key={flow.id} flow={flow} />)}
+          {flows.map((flow) => {
+            const hasAccess = isAdmin || accessFlowIds.includes(flow.id)
+            const alreadyRequested = requestedFlowIds.includes(flow.id)
+            if (hasAccess) {
+              return <FlowCard key={flow.id} flow={flow} />
+            } else {
+              return <LockedFlowCard key={flow.id} flow={flow} alreadyRequested={alreadyRequested} />
+            }
+          })}
         </div>
       )}
     </div>
@@ -77,5 +96,29 @@ function FlowCard({ flow }: { flow: Flow }) {
       </div>
       <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-[#1e1e1e] group-hover:bg-white/30 transition-colors" />
     </Link>
+  )
+}
+
+function LockedFlowCard({ flow, alreadyRequested }: { flow: Flow; alreadyRequested: boolean }) {
+  return (
+    <div className="relative flex flex-col bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl p-5 md:p-6 opacity-60">
+      <div className="w-10 h-10 rounded-xl bg-white/3 border border-white/5 flex items-center justify-center mb-4 md:mb-5">
+        <FlowIcon icon={flow.icon} className="w-4 h-4 text-[#3f3f46]" />
+      </div>
+      {flow.category && (
+        <span className="text-[10px] text-[#2a2a2a] uppercase tracking-widest font-medium mb-2">{flow.category}</span>
+      )}
+      <h3 className="text-sm font-semibold text-[#71717a] mb-2">{flow.name}</h3>
+      {flow.description && (
+        <p className="text-[#3f3f46] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{flow.description}</p>
+      )}
+      <div className="mt-auto">
+        <RequestAccessButton flowId={flow.id} alreadyRequested={alreadyRequested} />
+      </div>
+      {/* Icône cadenas */}
+      <div className="absolute top-4 right-4">
+        <LockIcon className="w-3.5 h-3.5 text-[#2a2a2a]" />
+      </div>
+    </div>
   )
 }
