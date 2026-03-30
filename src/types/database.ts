@@ -99,6 +99,30 @@ export interface Database {
         }
         Relationships: []
       }
+      support_messages: {
+        Row: {
+          id: string
+          profile_id: string
+          sender_id: string
+          content: string
+          is_admin_sender: boolean
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          sender_id: string
+          content: string
+          is_admin_sender?: boolean
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          is_read?: boolean
+        }
+        Relationships: []
+      }
       access_requests: {
         Row: {
           id: string
@@ -171,3 +195,4 @@ export type Flow = Database['public']['Tables']['flows']['Row']
 export type FlowAccess = Database['public']['Tables']['flow_access']['Row']
 export type FlowExecution = Database['public']['Tables']['flow_executions']['Row']
 export type AccessRequest = Database['public']['Tables']['access_requests']['Row']
+export type SupportMessage = Database['public']['Tables']['support_messages']['Row']

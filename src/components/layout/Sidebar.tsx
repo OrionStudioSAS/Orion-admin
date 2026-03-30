@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon } from '@/components/ui/Icons'
+import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon } from '@/components/ui/Icons'
 
 interface SidebarProps {
   profile: Profile
   pendingRequestsCount?: number
+  unreadMessagesCount?: number
 }
 
 function MenuIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -20,7 +21,7 @@ function MenuIcon({ className = 'w-5 h-5' }: { className?: string }) {
   )
 }
 
-export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarProps) {
+export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessagesCount = 0 }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
@@ -30,7 +31,13 @@ export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarPr
   const navItems = [
     { href: '/dashboard', icon: GridIcon, label: 'Flows' },
     { href: '/history', icon: HistoryIcon, label: 'Historique' },
-    ...(isAdmin ? [{ href: '/admin', icon: UsersIcon, label: 'Admin' }] : []),
+    {
+      href: isAdmin ? '/admin/chat' : '/chat',
+      icon: MessageIcon,
+      label: 'Messages',
+      badge: unreadMessagesCount,
+    },
+    ...(isAdmin ? [{ href: '/admin', icon: UsersIcon, label: 'Admin', badge: pendingRequestsCount }] : []),
   ]
 
   async function handleSignOut() {
@@ -64,8 +71,9 @@ export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarPr
         <div className="mb-1 px-3 pb-2">
           <span className="text-[10px] font-medium tracking-widest text-[#3f3f46] uppercase">Navigation</span>
         </div>
-        {navItems.map(({ href, icon: Icon, label }) => {
+        {navItems.map(({ href, icon: Icon, label, badge }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
+          const hasBadge = badge && badge > 0
           return (
             <Link
               key={href}
@@ -78,14 +86,12 @@ export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarPr
                 }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span>{label}</span>
-              {active && !( href === '/admin' && pendingRequestsCount > 0) && (
-                <StarIcon className="ml-auto w-2 h-2 text-black/40" />
-              )}
-              {href === '/admin' && pendingRequestsCount > 0 && (
-                <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
+              <span className="flex-1">{label}</span>
+              {active && !hasBadge && <StarIcon className="w-2 h-2 text-black/40" />}
+              {hasBadge && (
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
                   ${active ? 'bg-black/20 text-black' : 'bg-white text-black'}`}>
-                  {pendingRequestsCount}
+                  {badge > 99 ? '99+' : badge}
                 </span>
               )}
             </Link>
@@ -138,12 +144,19 @@ export default function Sidebar({ profile, pendingRequestsCount = 0 }: SidebarPr
           <LogoIcon className="w-6 h-6" />
           <span className="text-sm font-semibold text-white">Orion Studio</span>
         </div>
-        <button
-          onClick={() => setOpen(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
-        >
-          <MenuIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {unreadMessagesCount > 0 && (
+            <span className="text-[9px] font-bold bg-white text-black px-1.5 py-0.5 rounded-full">
+              {unreadMessagesCount}
+            </span>
+          )}
+          <button
+            onClick={() => setOpen(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+          >
+            <MenuIcon className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Overlay mobile */}
