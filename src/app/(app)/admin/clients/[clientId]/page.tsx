@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon } from '@/components/ui/Icons'
-import { Project, ProjectFile, ClientDocument } from '@/types/database'
+import { Project, ProjectFile } from '@/types/database'
 import ClientView from './ClientView'
 
 interface Props {
@@ -24,13 +24,11 @@ export default async function AdminClientDetailPage({ params }: Props) {
   const { data: client } = await admin.from('profiles').select('*').eq('id', clientId).single()
   if (!client || client.role !== 'client') notFound()
 
-  const [
-    { data: project },
-    { data: documents },
-  ] = await Promise.all([
-    admin.from('projects').select('*, project_files(*)').eq('profile_id', clientId).single(),
-    admin.from('client_documents').select('*').eq('profile_id', clientId).order('created_at', { ascending: false }),
-  ])
+  const { data: project } = await admin
+    .from('projects')
+    .select('*, project_files(*)')
+    .eq('profile_id', clientId)
+    .single()
 
   const projectFiles: ProjectFile[] = project?.project_files || []
 
@@ -74,7 +72,6 @@ export default async function AdminClientDetailPage({ params }: Props) {
         client={client}
         project={project as Project | null}
         projectFiles={projectFiles}
-        documents={(documents || []) as ClientDocument[]}
       />
     </div>
   )

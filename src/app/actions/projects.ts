@@ -74,6 +74,7 @@ export async function uploadProjectFile(formData: FormData) {
   const profileId = formData.get('profileId') as string
   const category = formData.get('category') as string
   const name = formData.get('name') as string
+  const visibleToClient = formData.get('visibleToClient') !== 'false'
 
   if (!file || !profileId || !category || !name) throw new Error('Données manquantes')
 
@@ -106,18 +107,26 @@ export async function uploadProjectFile(formData: FormData) {
     storage_path: path,
     original_name: file.name,
     size_bytes: file.size,
+    visible_to_client: visibleToClient,
   })
 
   if (dbError) throw new Error(dbError.message)
 
-  // Send WhatsApp notification for new file
+  // Send WhatsApp notification for new file (only if visible to client)
   const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
-  if (profile?.phone) {
+  if (profile?.phone && visibleToClient) {
     const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
     const msg = notifNewFile(firstName, name, category)
     sendWhatsAppMessage(profile.phone, msg).catch(() => {})
   }
 
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+export async function toggleFileVisibility(fileId: string, visible: boolean, profileId: string) {
+  const { admin } = await requireAdmin()
+  await admin.from('project_files').update({ visible_to_client: visible }).eq('id', fileId)
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }

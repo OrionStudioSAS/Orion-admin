@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification } from '@/app/actions/projects'
+import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility } from '@/app/actions/projects'
 import { Project, ProjectFile } from '@/types/database'
-import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon } from '@/components/ui/Icons'
+import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon } from '@/components/ui/Icons'
 
 const PLAN_OPTIONS = [
   { value: '', label: 'Non défini' },
@@ -69,6 +69,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
   const [uploadLoading, setUploadLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [uploadVisible, setUploadVisible] = useState(true)
 
   // WhatsApp state
   const [waMessage, setWaMessage] = useState('')
@@ -117,15 +118,23 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
       fd.append('profileId', profileId)
       fd.append('category', uploadingCategory)
       fd.append('name', uploadName.trim())
+      fd.append('visibleToClient', String(uploadVisible))
       await uploadProjectFile(fd)
       setPendingFile(null)
       setUploadName('')
       setUploadingCategory(null)
+      setUploadVisible(true)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Erreur upload')
     }
     setUploadLoading(false)
+  }
+
+  function handleToggleVisibility(fileId: string, current: boolean) {
+    startTransition(async () => {
+      await toggleFileVisibility(fileId, !current, profileId)
+    })
   }
 
   async function handleWaSend() {
@@ -317,38 +326,49 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
 
             {/* Upload form */}
             {isUploading && pendingFile && (
-              <div className="px-5 py-4 bg-white/3 border-b border-[#1e1e1e] flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-[#a1a1aa] mb-1">Nom affiché</div>
+              <div className="px-5 py-4 bg-white/3 border-b border-[#1e1e1e] flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-[#a1a1aa] mb-1">Nom affiché</div>
+                    <input
+                      type="text"
+                      value={uploadName}
+                      onChange={e => setUploadName(e.target.value)}
+                      placeholder="Ex : Plan d'action personnalisé"
+                      className="w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
+                      autoFocus
+                    />
+                    <div className="text-[10px] text-[#a1a1aa] mt-1">{pendingFile.name} · {formatBytes(pendingFile.size)}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleUpload}
+                      disabled={uploadLoading || !uploadName.trim()}
+                      className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+                    >
+                      <UploadIcon className="w-3.5 h-3.5" />
+                      {uploadLoading ? 'Envoi...' : 'Uploader'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPendingFile(null); setUploadingCategory(null); setUploadName(''); setUploadVisible(true) }}
+                      className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer w-fit">
                   <input
-                    type="text"
-                    value={uploadName}
-                    onChange={e => setUploadName(e.target.value)}
-                    placeholder="Ex : Plan d'action personnalisé"
-                    className="w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
-                    autoFocus
+                    type="checkbox"
+                    checked={uploadVisible}
+                    onChange={e => setUploadVisible(e.target.checked)}
+                    className="w-4 h-4 accent-white rounded"
                   />
-                  <div className="text-[10px] text-[#a1a1aa] mt-1">{pendingFile.name} · {formatBytes(pendingFile.size)}</div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleUpload}
-                    disabled={uploadLoading || !uploadName.trim()}
-                    className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
-                  >
-                    <UploadIcon className="w-3.5 h-3.5" />
-                    {uploadLoading ? 'Envoi...' : 'Uploader'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setPendingFile(null); setUploadingCategory(null); setUploadName('') }}
-                    className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    Annuler
-                  </button>
-                </div>
-                {uploadError && <p className="text-xs text-red-400 w-full">{uploadError}</p>}
+                  <span className="text-xs text-[#a1a1aa]">Visible par le client</span>
+                </label>
+                {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
               </div>
             )}
 
@@ -362,13 +382,27 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
                 {catFiles.map(file => (
                   <div key={file.id} className="flex items-center gap-3 md:gap-4 px-5 py-3 bg-[#080808]/30">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white truncate">{file.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white truncate">{file.name}</span>
+                        {!file.visible_to_client && (
+                          <span className="text-[9px] text-[#52525b] border border-[#1e1e1e] rounded-full px-2 py-0.5 shrink-0">Admin only</span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-[#a1a1aa] mt-0.5">
                         {file.original_name}
                         {file.size_bytes ? ` · ${formatBytes(file.size_bytes)}` : ''}
                         {' · '}{new Date(file.created_at).toLocaleDateString('fr-FR')}
                       </div>
                     </div>
+                    <button
+                      onClick={() => handleToggleVisibility(file.id, file.visible_to_client)}
+                      disabled={isPending}
+                      title={file.visible_to_client ? 'Masquer au client' : 'Rendre visible au client'}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all
+                        ${file.visible_to_client ? 'text-[#a1a1aa] hover:text-white hover:bg-white/5' : 'text-[#52525b] hover:text-green-400 hover:bg-green-500/10'}`}
+                    >
+                      {file.visible_to_client ? <EyeIcon className="w-3.5 h-3.5" /> : <EyeOffIcon className="w-3.5 h-3.5" />}
+                    </button>
                     <button
                       onClick={() => handleDelete(file.id, file.storage_path)}
                       disabled={isPending}

@@ -47,9 +47,9 @@ export default async function ProjectPage() {
     .eq('profile_id', user.id)
     .single()
 
-  const files = (project?.project_files || []) as Array<{
-    id: string; name: string; category: string; storage_path: string; original_name: string | null; size_bytes: number | null; created_at: string
-  }>
+  const files = ((project?.project_files || []) as Array<{
+    id: string; name: string; category: string; storage_path: string; original_name: string | null; size_bytes: number | null; visible_to_client: boolean; created_at: string
+  }>).filter(f => f.visible_to_client !== false)
 
   const resources = files.filter(f => f.category === 'resource')
   const quotes = files.filter(f => f.category === 'quote')

@@ -25,6 +25,15 @@ export async function updateProfile(data: {
   revalidatePath('/profile')
 }
 
+export async function changePassword(newPassword: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non autorisé')
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(user.id, { password: newPassword })
+  if (error) throw new Error(error.message)
+}
+
 export async function cancelAccessRequest(flowId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

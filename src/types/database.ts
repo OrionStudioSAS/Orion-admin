@@ -144,6 +144,7 @@ export interface Database {
           storage_path: string
           original_name: string | null
           size_bytes: number | null
+          visible_to_client: boolean
           created_at: string
         }
         Insert: {
@@ -154,10 +155,12 @@ export interface Database {
           storage_path: string
           original_name?: string | null
           size_bytes?: number | null
+          visible_to_client?: boolean
           created_at?: string
         }
         Update: {
           name?: string
+          visible_to_client?: boolean
         }
         Relationships: []
       }
