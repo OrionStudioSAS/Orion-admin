@@ -108,6 +108,7 @@ export interface Database {
           figma_url: string | null
           site_url: string | null
           monday_url: string | null
+          deadline: string | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -120,6 +121,7 @@ export interface Database {
           figma_url?: string | null
           site_url?: string | null
           monday_url?: string | null
+          deadline?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -130,6 +132,7 @@ export interface Database {
           figma_url?: string | null
           site_url?: string | null
           monday_url?: string | null
+          deadline?: string | null
           notes?: string | null
           updated_at?: string
         }
@@ -201,6 +204,8 @@ export interface Database {
           description: string | null
           status: 'todo' | 'in_progress' | 'done'
           position: number
+          start_date: string | null
+          end_date: string | null
           created_at: string
         }
         Insert: {
@@ -210,6 +215,8 @@ export interface Database {
           description?: string | null
           status?: 'todo' | 'in_progress' | 'done'
           position?: number
+          start_date?: string | null
+          end_date?: string | null
           created_at?: string
         }
         Update: {
@@ -217,6 +224,42 @@ export interface Database {
           description?: string | null
           status?: 'todo' | 'in_progress' | 'done'
           position?: number
+          start_date?: string | null
+          end_date?: string | null
+        }
+        Relationships: []
+      }
+      step_messages: {
+        Row: {
+          id: string
+          step_id: string
+          project_id: string
+          sender_id: string
+          is_admin_sender: boolean
+          content: string | null
+          attachment_path: string | null
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_type: string | null
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          step_id: string
+          project_id: string
+          sender_id: string
+          is_admin_sender?: boolean
+          content?: string | null
+          attachment_path?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          is_read?: boolean
         }
         Relationships: []
       }
@@ -379,3 +422,4 @@ export type ProjectFile = Database['public']['Tables']['project_files']['Row']
 export type Prospect = Database['public']['Tables']['prospects']['Row']
 export type ClientDocument = Database['public']['Tables']['client_documents']['Row']
 export type ProjectStep = Database['public']['Tables']['project_steps']['Row']
+export type StepMessage = Database['public']['Tables']['step_messages']['Row']

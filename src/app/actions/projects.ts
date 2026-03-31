@@ -187,7 +187,7 @@ export async function createStep(projectId: string, profileId: string, data: { t
   revalidatePath('/project')
 }
 
-export async function updateStep(stepId: string, profileId: string, data: { title?: string; description?: string | null; status?: 'todo' | 'in_progress' | 'done' }) {
+export async function updateStep(stepId: string, profileId: string, data: { title?: string; description?: string | null; status?: 'todo' | 'in_progress' | 'done'; start_date?: string | null; end_date?: string | null }) {
   const { admin } = await requireAdmin()
   const { error } = await admin.from('project_steps').update(data).eq('id', stepId)
   if (error) throw new Error(error.message)
@@ -210,4 +210,86 @@ export async function reorderSteps(projectId: string, profileId: string, ordered
   ))
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
+}
+
+export async function sendStepMessage(formData: FormData): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non autorisé')
+
+  const admin = createAdminClient()
+  const { data: senderProfile } = await admin.from('profiles').select('role').eq('id', user.id).single()
+  const isAdmin = senderProfile?.role === 'admin'
+
+  const stepId = formData.get('stepId') as string
+  const projectId = formData.get('projectId') as string
+  const content = (formData.get('content') as string)?.trim() || null
+  const file = formData.get('file') as File | null
+  const profileId = formData.get('profileId') as string
+
+  if (!isAdmin) {
+    const { data: project } = await admin.from('projects').select('profile_id').eq('id', projectId).single()
+    if (project?.profile_id !== user.id) throw new Error('Accès refusé')
+  }
+
+  if (!content && (!file || file.size === 0)) throw new Error('Message vide')
+
+  let attachmentPath: string | null = null
+  let attachmentName: string | null = null
+  let attachmentSize: number | null = null
+  let attachmentType: string | null = null
+
+  if (file && file.size > 0) {
+    const bytes = await file.arrayBuffer()
+    attachmentPath = `step-chat/${profileId}/${stepId}/${Date.now()}-${file.name}`
+    const { error: storageError } = await admin.storage
+      .from('project-files')
+      .upload(attachmentPath, bytes, { contentType: file.type })
+    if (storageError) throw new Error(storageError.message)
+    attachmentName = file.name
+    attachmentSize = file.size
+    attachmentType = file.type
+  }
+
+  await admin.from('step_messages').insert({
+    step_id: stepId,
+    project_id: projectId,
+    sender_id: user.id,
+    is_admin_sender: isAdmin,
+    content,
+    attachment_path: attachmentPath,
+    attachment_name: attachmentName,
+    attachment_size: attachmentSize,
+    attachment_type: attachmentType,
+    is_read: false,
+  })
+
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+export async function markStepMessagesRead(stepId: string, projectId: string, isAdmin: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const admin = createAdminClient()
+  // Mark messages sent by the OTHER party as read
+  await admin.from('step_messages')
+    .update({ is_read: true })
+    .eq('step_id', stepId)
+    .eq('project_id', projectId)
+    .eq('is_admin_sender', !isAdmin)
+    .eq('is_read', false)
+}
+
+export async function getStepAttachmentUrl(attachmentPath: string): Promise<string> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non autorisé')
+  const admin = createAdminClient()
+  const { data, error } = await admin.storage
+    .from('project-files')
+    .createSignedUrl(attachmentPath, 60 * 10)
+  if (error || !data?.signedUrl) throw new Error('Impossible de générer le lien')
+  return data.signedUrl
 }

@@ -58,6 +58,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     status: project?.status || 'en_cours',
     figma_url: project?.figma_url || '',
     site_url: project?.site_url || '',
+    deadline: project?.deadline || '',
     notes: project?.notes || '',
   })
 
@@ -100,6 +101,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
         status: form.status as Project['status'],
         figma_url: form.figma_url || null,
         site_url: form.site_url || null,
+        deadline: form.deadline || null,
         notes: form.notes || null,
       })
       setSaved(true)
@@ -237,6 +239,10 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
           <div>
             <label className={labelClass}>URL du site</label>
             <input type="url" value={form.site_url} onChange={handleChange('site_url')} placeholder="https://monsite.fr" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Date de livraison</label>
+            <input type="date" value={form.deadline} onChange={handleChange('deadline')} className={`${inputClass} [color-scheme:dark]`} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Note pour le client</label>

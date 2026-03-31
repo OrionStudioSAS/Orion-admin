@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon, ExternalLinkIcon, FolderIcon } from '@/components/ui/Icons'
 import DownloadButton from './DownloadButton'
 import OpenLinkButton from './OpenLinkButton'
+import ClientStepRow from './ClientStepRow'
+import { StepMessage } from '@/types/database'
 
 const PLAN_LABELS: Record<string, string> = {
   webflow_creation: 'Création Webflow',
@@ -52,6 +54,15 @@ export default async function ProjectPage() {
     ? (await admin.from('project_steps').select('*').eq('project_id', project.id).order('position', { ascending: true })).data || []
     : []
 
+  const stepMessagesMap: Record<string, StepMessage[]> = {}
+  if (project && steps.length > 0) {
+    const { data: msgs } = await admin.from('step_messages').select('*').eq('project_id', project.id).order('created_at', { ascending: true })
+    for (const msg of (msgs || []) as StepMessage[]) {
+      if (!stepMessagesMap[msg.step_id]) stepMessagesMap[msg.step_id] = []
+      stepMessagesMap[msg.step_id].push(msg)
+    }
+  }
+
   const files = ((project?.project_files || []) as Array<{
     id: string; name: string; category: string; type: string; storage_path: string | null; url: string | null; original_name: string | null; size_bytes: number | null; visible_to_client: boolean; created_at: string
   }>).filter(f => f.visible_to_client !== false)
@@ -80,6 +91,12 @@ export default async function ProjectPage() {
           {project?.plan_type && (
             <span className="text-[10px] text-[#a1a1aa] bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
               {PLAN_LABELS[project.plan_type]}
+            </span>
+          )}
+          {project?.deadline && (
+            <span className="text-[10px] text-[#a1a1aa] bg-white/5 border border-white/10 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Livraison : {new Date(project.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </span>
           )}
         </div>
@@ -164,41 +181,24 @@ export default async function ProjectPage() {
                     <span className="text-xs font-semibold text-white shrink-0">{donePct}%</span>
                   </div>
                 </div>
-                <div className="px-5 py-4 space-y-3">
+                <div className="px-5 py-4 space-y-4">
                   {steps.map((step, idx) => {
                     const isDone = step.status === 'done'
                     const isInProgress = step.status === 'in_progress'
+                    const msgs = stepMessagesMap[step.id] ?? []
+                    const unread = msgs.filter(m => m.is_admin_sender && !m.is_read).length
                     return (
-                      <div key={step.id} className="flex items-start gap-3">
-                        {/* Icon */}
-                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-all
-                          ${isDone ? 'bg-white border-white' : isInProgress ? 'border-blue-500/50 bg-blue-500/10' : 'border-[#2a2a2a] bg-transparent'}`}>
-                          {isDone ? (
-                            <svg className="w-3 h-3 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          ) : isInProgress ? (
-                            <div className="w-2 h-2 rounded-full bg-blue-400" />
-                          ) : (
-                            <span className="text-[8px] text-[#52525b] font-mono">{idx + 1}</span>
-                          )}
-                        </div>
-                        {/* Text */}
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <div className={`text-sm font-medium transition-colors ${isDone ? 'text-[#a1a1aa] line-through decoration-[#3f3f46]' : 'text-white'}`}>
-                            {step.title}
-                          </div>
-                          {step.description && (
-                            <div className="text-xs text-[#52525b] mt-0.5">{step.description}</div>
-                          )}
-                        </div>
-                        {/* Badge */}
-                        {isInProgress && (
-                          <span className="text-[9px] font-semibold text-blue-400 border border-blue-500/30 bg-blue-500/10 rounded-full px-2 py-0.5 shrink-0 mt-0.5">
-                            En cours
-                          </span>
-                        )}
-                      </div>
+                      <ClientStepRow
+                        key={step.id}
+                        idx={idx}
+                        step={step}
+                        isDone={isDone}
+                        isInProgress={isInProgress}
+                        msgs={msgs}
+                        unread={unread}
+                        profileId={user.id}
+                        projectId={project.id}
+                      />
                     )
                   })}
                 </div>

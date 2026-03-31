@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon } from '@/components/ui/Icons'
 import ProjectManager from './ProjectManager'
 import StepsManager from './StepsManager'
-import { Project, ProjectFile, ProjectStep } from '@/types/database'
+import { Project, ProjectFile, ProjectStep, StepMessage } from '@/types/database'
 import { isWhatsAppConfigured } from '@/lib/whatsapp'
 
 interface Props {
@@ -30,13 +30,19 @@ export default async function AdminUserProjectPage({ params }: Props) {
 
   let files: ProjectFile[] = []
   let steps: ProjectStep[] = []
+  let stepMessagesMap: Record<string, StepMessage[]> = {}
   if (project) {
-    const [filesRes, stepsRes] = await Promise.all([
+    const [filesRes, stepsRes, msgsRes] = await Promise.all([
       admin.from('project_files').select('*').eq('project_id', project.id).order('created_at', { ascending: false }),
       admin.from('project_steps').select('*').eq('project_id', project.id).order('position', { ascending: true }),
+      admin.from('step_messages').select('*').eq('project_id', project.id).order('created_at', { ascending: true }),
     ])
     files = filesRes.data || []
     steps = stepsRes.data || []
+    for (const msg of (msgsRes.data || []) as StepMessage[]) {
+      if (!stepMessagesMap[msg.step_id]) stepMessagesMap[msg.step_id] = []
+      stepMessagesMap[msg.step_id].push(msg)
+    }
   }
 
   const whatsappConfigured = isWhatsAppConfigured()
@@ -91,6 +97,7 @@ export default async function AdminUserProjectPage({ params }: Props) {
             projectId={project.id}
             profileId={profileId}
             steps={steps}
+            stepMessages={stepMessagesMap}
           />
         )}
       </div>
