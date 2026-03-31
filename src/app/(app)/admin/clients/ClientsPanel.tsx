@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Profile } from '@/types/database'
-import { ExternalLinkIcon, FolderIcon } from '@/components/ui/Icons'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   en_cours: { label: 'En cours', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
@@ -87,9 +86,10 @@ export default function ClientsPanel({ clients }: Props) {
             const initials = (client.company || client.full_name || client.email).slice(0, 2).toUpperCase()
 
             return (
-              <div
+              <Link
                 key={client.id}
-                className="group bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl px-4 md:px-6 py-4 hover:border-white/10 transition-all flex items-center gap-4"
+                href={`/admin/clients/${client.id}`}
+                className="group bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl px-4 md:px-6 py-4 hover:border-white/20 transition-all flex items-center gap-4"
               >
                 {/* Avatar */}
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-sm font-semibold text-white">
@@ -124,28 +124,11 @@ export default function ClientsPanel({ clients }: Props) {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {client.website && (
-                    <a
-                      href={client.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
-                      title="Site web"
-                    >
-                      <ExternalLinkIcon className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                  <Link
-                    href={`/admin/users/${client.id}`}
-                    className="flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all"
-                  >
-                    <FolderIcon className="w-3 h-3" />
-                    <span className="hidden sm:inline">Projet</span>
-                  </Link>
-                </div>
-              </div>
+                {/* Arrow */}
+                <svg className="w-4 h-4 text-[#52525b] group-hover:text-[#a1a1aa] transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
             )
           })}
         </div>

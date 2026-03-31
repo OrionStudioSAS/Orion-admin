@@ -185,6 +185,38 @@ export interface Database {
         }
         Relationships: []
       }
+      client_documents: {
+        Row: {
+          id: string
+          profile_id: string
+          type: 'file' | 'link'
+          name: string
+          url: string | null
+          storage_path: string | null
+          original_name: string | null
+          size_bytes: number | null
+          visible_to_client: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          type?: 'file' | 'link'
+          name: string
+          url?: string | null
+          storage_path?: string | null
+          original_name?: string | null
+          size_bytes?: number | null
+          visible_to_client?: boolean
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          url?: string | null
+          visible_to_client?: boolean
+        }
+        Relationships: []
+      }
       prospects: {
         Row: {
           id: string
@@ -310,3 +342,4 @@ export type SupportMessage = Database['public']['Tables']['support_messages']['R
 export type Project = Database['public']['Tables']['projects']['Row']
 export type ProjectFile = Database['public']['Tables']['project_files']['Row']
 export type Prospect = Database['public']['Tables']['prospects']['Row']
+export type ClientDocument = Database['public']['Tables']['client_documents']['Row']
