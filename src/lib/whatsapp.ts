@@ -56,7 +56,7 @@ export async function sendWhatsAppMessage(phone: string, message: string): Promi
 export function notifNewFile(firstName: string, fileName: string, category: string): string {
   const catLabel = { resource: 'document', invoice: 'facture', quote: 'devis' }[category] ?? 'fichier'
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  return `👋 Bonjour ${firstName},\n\nUn nouveau ${catLabel} est disponible dans votre espace Orion Studio :\n📄 *${fileName}*\n\nConnectez-vous pour le consulter :\n${appUrl}/project`
+  return `👋 Bonjour ${firstName},\n\nUne nouvelle ${catLabel} est disponible dans votre espace Orion Studio :\n📄 *${fileName}*\n\nConnectez-vous pour le consulter :\n${appUrl}/project`
 }
 
 export function notifStatusChange(firstName: string, status: string): string {

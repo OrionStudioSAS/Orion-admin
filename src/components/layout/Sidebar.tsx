@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon, FolderIcon } from '@/components/ui/Icons'
+import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon, FolderIcon, BuildingIcon, TargetIcon } from '@/components/ui/Icons'
 
 interface SidebarProps {
   profile: Profile
@@ -29,16 +29,15 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
   const isAdmin = profile.role === 'admin'
 
   const navItems = [
-    { href: '/dashboard', icon: GridIcon, label: 'Flows' },
-    ...(!isAdmin ? [{ href: '/project', icon: FolderIcon, label: 'Mon projet' }] : []),
-    { href: '/history', icon: HistoryIcon, label: 'Historique' },
-    {
-      href: isAdmin ? '/admin/chat' : '/chat',
-      icon: MessageIcon,
-      label: 'Messages',
-      badge: unreadMessagesCount,
-    },
-    ...(isAdmin ? [{ href: '/admin', icon: UsersIcon, label: 'Admin', badge: pendingRequestsCount }] : []),
+    { href: '/dashboard', icon: GridIcon, label: 'Flows', section: null },
+    ...(!isAdmin ? [{ href: '/project', icon: FolderIcon, label: 'Mon projet', section: null }] : []),
+    { href: '/history', icon: HistoryIcon, label: 'Historique', section: null },
+    { href: isAdmin ? '/admin/chat' : '/chat', icon: MessageIcon, label: 'Messages', badge: unreadMessagesCount, section: null },
+    ...(isAdmin ? [
+      { href: '/admin', icon: UsersIcon, label: 'Utilisateurs', badge: pendingRequestsCount, section: 'Admin' },
+      { href: '/admin/clients', icon: BuildingIcon, label: 'Clients', section: null },
+      { href: '/admin/prospection', icon: TargetIcon, label: 'Prospection', section: null },
+    ] : []),
   ]
 
   async function handleSignOut() {
@@ -68,38 +67,45 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 px-3">
+      <nav className="flex-1 py-4 px-3 overflow-y-auto">
         <div className="mb-1 px-3 pb-2">
           <span className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Navigation</span>
         </div>
-        {navItems.map(({ href, icon: Icon, label, badge }) => {
+        {navItems.map(({ href, icon: Icon, label, badge, section }, idx) => {
           const active = pathname === href || (
-            href !== '/admin'
-              ? pathname.startsWith(href + '/')
-              : pathname.startsWith('/admin/') && !pathname.startsWith('/admin/chat')
+            href === '/admin'
+              ? pathname.startsWith('/admin/users')
+              : pathname.startsWith(href + '/')
           )
           const hasBadge = badge && badge > 0
+          const showSectionLabel = section && (idx === 0 || navItems[idx - 1].section !== section)
           return (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-all duration-150 group
-                ${active
-                  ? 'bg-white text-black font-medium'
-                  : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'
-                }`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span className="flex-1">{label}</span>
-              {active && !hasBadge && <StarIcon className="w-2 h-2 text-black/40" />}
-              {hasBadge && (
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
-                  ${active ? 'bg-black/20 text-black' : 'bg-white text-black'}`}>
-                  {badge > 99 ? '99+' : badge}
-                </span>
+            <div key={href}>
+              {showSectionLabel && (
+                <div className="px-3 pt-4 pb-1.5">
+                  <span className="text-[10px] font-medium tracking-widest text-[#52525b] uppercase">{section}</span>
+                </div>
               )}
-            </Link>
+              <Link
+                href={href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-all duration-150 group
+                  ${active
+                    ? 'bg-white text-black font-medium'
+                    : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="flex-1">{label}</span>
+                {active && !hasBadge && <StarIcon className="w-2 h-2 text-black/40" />}
+                {hasBadge && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
+                    ${active ? 'bg-black/20 text-black' : 'bg-white text-black'}`}>
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+              </Link>
+            </div>
           )
         })}
       </nav>

@@ -185,6 +185,55 @@ export interface Database {
         }
         Relationships: []
       }
+      prospects: {
+        Row: {
+          id: string
+          company_name: string
+          contact_name: string | null
+          email: string | null
+          phone: string | null
+          linkedin_url: string | null
+          website: string | null
+          sector: string | null
+          location: string | null
+          source: string
+          status: 'nouveau' | 'contacte' | 'en_discussion' | 'converti' | 'perdu'
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_name: string
+          contact_name?: string | null
+          email?: string | null
+          phone?: string | null
+          linkedin_url?: string | null
+          website?: string | null
+          sector?: string | null
+          location?: string | null
+          source?: string
+          status?: 'nouveau' | 'contacte' | 'en_discussion' | 'converti' | 'perdu'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string | null
+          email?: string | null
+          phone?: string | null
+          linkedin_url?: string | null
+          website?: string | null
+          sector?: string | null
+          location?: string | null
+          source?: string
+          status?: 'nouveau' | 'contacte' | 'en_discussion' | 'converti' | 'perdu'
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       access_requests: {
         Row: {
           id: string
@@ -260,3 +309,4 @@ export type AccessRequest = Database['public']['Tables']['access_requests']['Row
 export type SupportMessage = Database['public']['Tables']['support_messages']['Row']
 export type Project = Database['public']['Tables']['projects']['Row']
 export type ProjectFile = Database['public']['Tables']['project_files']['Row']
+export type Prospect = Database['public']['Tables']['prospects']['Row']
