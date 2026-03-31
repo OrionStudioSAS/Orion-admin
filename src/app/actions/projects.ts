@@ -42,12 +42,12 @@ export async function upsertProject(profileId: string, data: Partial<Project>) {
   revalidatePath('/project')
 }
 
-export async function deleteProjectFile(fileId: string, storagePath: string) {
+export async function deleteProjectFile(fileId: string, storagePath: string | null) {
   const { admin } = await requireAdmin()
 
-  // Delete from storage
-  await admin.storage.from('project-files').remove([storagePath])
-  // Delete from DB
+  if (storagePath) {
+    await admin.storage.from('project-files').remove([storagePath])
+  }
   await admin.from('project_files').delete().eq('id', fileId)
 
   revalidatePath('/project')
@@ -119,6 +119,38 @@ export async function uploadProjectFile(formData: FormData) {
     const msg = notifNewFile(firstName, name, category)
     sendWhatsAppMessage(profile.phone, msg).catch(() => {})
   }
+
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+export async function addProjectLink(profileId: string, data: {
+  category: 'resource' | 'invoice' | 'quote'
+  name: string
+  url: string
+  visibleToClient: boolean
+}) {
+  const { admin } = await requireAdmin()
+
+  let projectId: string
+  const { data: existing } = await admin.from('projects').select('id').eq('profile_id', profileId).single()
+  if (existing) {
+    projectId = existing.id
+  } else {
+    const { data: created } = await admin.from('projects').insert({ profile_id: profileId }).select('id').single()
+    if (!created) throw new Error('Impossible de créer le projet')
+    projectId = created.id
+  }
+
+  const { error } = await admin.from('project_files').insert({
+    project_id: projectId,
+    type: 'link',
+    name: data.name,
+    category: data.category,
+    url: data.url,
+    visible_to_client: data.visibleToClient,
+  })
+  if (error) throw new Error(error.message)
 
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')

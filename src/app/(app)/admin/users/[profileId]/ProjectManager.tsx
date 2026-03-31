@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility } from '@/app/actions/projects'
+import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink } from '@/app/actions/projects'
 import { Project, ProjectFile } from '@/types/database'
-import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon } from '@/components/ui/Icons'
+import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon, LinkIcon } from '@/components/ui/Icons'
 
 const PLAN_OPTIONS = [
   { value: '', label: 'Non défini' },
@@ -71,6 +71,12 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [uploadVisible, setUploadVisible] = useState(true)
 
+  // Link add state
+  const [linkCategory, setLinkCategory] = useState<string | null>(null)
+  const [linkForm, setLinkForm] = useState({ name: '', url: '', visible: true })
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [linkError, setLinkError] = useState('')
+
   // WhatsApp state
   const [waMessage, setWaMessage] = useState('')
   const [waSending, setWaSending] = useState(false)
@@ -137,6 +143,25 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     })
   }
 
+  async function handleAddLink(category: string) {
+    if (!linkForm.name.trim() || !linkForm.url.trim()) return
+    setLinkLoading(true)
+    setLinkError('')
+    try {
+      await addProjectLink(profileId, {
+        category: category as 'resource' | 'invoice' | 'quote',
+        name: linkForm.name.trim(),
+        url: linkForm.url.trim(),
+        visibleToClient: linkForm.visible,
+      })
+      setLinkForm({ name: '', url: '', visible: true })
+      setLinkCategory(null)
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : 'Erreur')
+    }
+    setLinkLoading(false)
+  }
+
   async function handleWaSend() {
     if (!waMessage.trim() || waSending) return
     setWaSending(true)
@@ -154,7 +179,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     setWaSending(false)
   }
 
-  function handleDelete(fileId: string, storagePath: string) {
+  function handleDelete(fileId: string, storagePath: string | null) {
     if (!confirm('Supprimer ce fichier définitivement ?')) return
     startTransition(async () => {
       await deleteProjectFile(fileId, storagePath)
@@ -305,6 +330,8 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
         const catFiles = files.filter(f => f.category === key)
         const isUploading = uploadingCategory === key
 
+        const isAddingLink = linkCategory === key
+
         return (
           <div key={key} className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
@@ -312,17 +339,87 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
                 <div className="text-sm font-semibold text-white">{label}</div>
                 <div className="text-xs text-[#a1a1aa] mt-0.5">{desc}</div>
               </div>
-              <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg cursor-pointer transition-all">
-                <PlusIcon className="w-3 h-3" />
-                Ajouter
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  className="hidden"
-                  onChange={e => handleFileSelect(e, key)}
-                />
-              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setLinkCategory(isAddingLink ? null : key); setLinkForm({ name: '', url: '', visible: true }); setLinkError('') }}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all
+                    ${isAddingLink ? 'bg-white text-black border-white' : 'text-[#a1a1aa] border-[#1e1e1e] hover:text-white hover:border-white/20'}`}
+                >
+                  <LinkIcon className="w-3 h-3" />
+                  Lien
+                </button>
+                <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                  <PlusIcon className="w-3 h-3" />
+                  Fichier
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={e => handleFileSelect(e, key)}
+                  />
+                </label>
+              </div>
             </div>
+
+            {/* Add link form */}
+            {isAddingLink && (
+              <div className="px-5 py-4 bg-[#080808]/50 border-b border-[#1e1e1e]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <div className="text-xs text-[#a1a1aa] mb-1">Nom affiché</div>
+                    <input
+                      type="text"
+                      value={linkForm.name}
+                      onChange={e => setLinkForm(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Ex : Maquette Figma, Brief..."
+                      className="w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-[#a1a1aa] mb-1">URL</div>
+                    <input
+                      type="url"
+                      value={linkForm.url}
+                      onChange={e => setLinkForm(p => ({ ...p, url: e.target.value }))}
+                      placeholder="https://..."
+                      className="w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={linkForm.visible}
+                      onChange={e => setLinkForm(p => ({ ...p, visible: e.target.checked }))}
+                      className="w-4 h-4 accent-white rounded"
+                    />
+                    <span className="text-xs text-[#a1a1aa]">Visible par le client</span>
+                  </label>
+                </div>
+                {linkError && <p className="text-xs text-red-400 mb-2">{linkError}</p>}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAddLink(key)}
+                    disabled={linkLoading || !linkForm.name.trim() || !linkForm.url.trim()}
+                    className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    {linkLoading ? 'Ajout...' : 'Ajouter le lien'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLinkCategory(null)}
+                    className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Upload form */}
             {isUploading && pendingFile && (
@@ -381,6 +478,14 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
               <div className="divide-y divide-[#0a0a0a]">
                 {catFiles.map(file => (
                   <div key={file.id} className="flex items-center gap-3 md:gap-4 px-5 py-3 bg-[#080808]/30">
+                    {/* Type icon */}
+                    <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0
+                      ${file.type === 'link' ? 'bg-blue-500/10 border-blue-500/20' : 'bg-white/5 border-white/5'}`}>
+                      {file.type === 'link'
+                        ? <LinkIcon className="w-3.5 h-3.5 text-blue-400" />
+                        : <svg className="w-3 h-3 text-[#a1a1aa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round" /><polyline points="14 2 14 8 20 8" strokeLinejoin="round" /></svg>
+                      }
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-white truncate">{file.name}</span>
@@ -389,11 +494,24 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
                         )}
                       </div>
                       <div className="text-[10px] text-[#a1a1aa] mt-0.5">
-                        {file.original_name}
-                        {file.size_bytes ? ` · ${formatBytes(file.size_bytes)}` : ''}
-                        {' · '}{new Date(file.created_at).toLocaleDateString('fr-FR')}
+                        {file.type === 'link' && file.url && <span className="truncate block max-w-xs">{file.url}</span>}
+                        {file.type !== 'link' && file.original_name && (
+                          <>{file.original_name}{file.size_bytes ? ` · ${formatBytes(file.size_bytes)}` : ''} · {new Date(file.created_at).toLocaleDateString('fr-FR')}</>
+                        )}
                       </div>
                     </div>
+                    {/* Open link */}
+                    {file.type === 'link' && file.url && (
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
+                        title="Ouvrir le lien"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeLinecap="round" /><polyline points="15 3 21 3 21 9" strokeLinecap="round" strokeLinejoin="round" /><line x1="10" y1="14" x2="21" y2="3" strokeLinecap="round" /></svg>
+                      </a>
+                    )}
                     <button
                       onClick={() => handleToggleVisibility(file.id, file.visible_to_client)}
                       disabled={isPending}
@@ -404,7 +522,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
                       {file.visible_to_client ? <EyeIcon className="w-3.5 h-3.5" /> : <EyeOffIcon className="w-3.5 h-3.5" />}
                     </button>
                     <button
-                      onClick={() => handleDelete(file.id, file.storage_path)}
+                      onClick={() => handleDelete(file.id, file.storage_path ?? null)}
                       disabled={isPending}
                       className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-red-400 hover:bg-red-500/10 transition-all"
                     >

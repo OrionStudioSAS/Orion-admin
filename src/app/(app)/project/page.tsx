@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon, ExternalLinkIcon, FolderIcon } from '@/components/ui/Icons'
 import DownloadButton from './DownloadButton'
+import OpenLinkButton from './OpenLinkButton'
 
 const PLAN_LABELS: Record<string, string> = {
   webflow_creation: 'Création Webflow',
@@ -48,7 +49,7 @@ export default async function ProjectPage() {
     .single()
 
   const files = ((project?.project_files || []) as Array<{
-    id: string; name: string; category: string; storage_path: string; original_name: string | null; size_bytes: number | null; visible_to_client: boolean; created_at: string
+    id: string; name: string; category: string; type: string; storage_path: string | null; url: string | null; original_name: string | null; size_bytes: number | null; visible_to_client: boolean; created_at: string
   }>).filter(f => f.visible_to_client !== false)
 
   const resources = files.filter(f => f.category === 'resource')
@@ -188,11 +189,19 @@ export default async function ProjectPage() {
                 <div className="divide-y divide-[#0f0f0f]">
                   {sectionFiles.map(file => (
                     <div key={file.id} className="flex items-center gap-3 md:gap-4 px-5 py-3.5 bg-[#080808]/50">
-                      <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
-                        <svg className="w-3.5 h-3.5 text-[#a1a1aa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round" />
-                          <polyline points="14 2 14 8 20 8" strokeLinejoin="round" />
-                        </svg>
+                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0
+                        ${file.type === 'link' ? 'bg-blue-500/10 border-blue-500/20' : 'bg-white/5 border-white/5'}`}>
+                        {file.type === 'link' ? (
+                          <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5 text-[#a1a1aa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round" />
+                            <polyline points="14 2 14 8 20 8" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-white truncate">{file.name}</div>
@@ -204,7 +213,10 @@ export default async function ProjectPage() {
                       <div className="text-[10px] text-[#a1a1aa] shrink-0 hidden sm:block">
                         {new Date(file.created_at).toLocaleDateString('fr-FR')}
                       </div>
-                      <DownloadButton storagePath={file.storage_path} fileName={file.original_name || file.name} />
+                      {file.type === 'link' && file.url
+                        ? <OpenLinkButton url={file.url} />
+                        : file.storage_path && <DownloadButton storagePath={file.storage_path} fileName={file.original_name || file.name} />
+                      }
                     </div>
                   ))}
                 </div>

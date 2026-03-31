@@ -141,7 +141,9 @@ export interface Database {
           project_id: string
           name: string
           category: 'resource' | 'invoice' | 'quote'
-          storage_path: string
+          type: 'file' | 'link'
+          storage_path: string | null
+          url: string | null
           original_name: string | null
           size_bytes: number | null
           visible_to_client: boolean
@@ -152,7 +154,9 @@ export interface Database {
           project_id: string
           name: string
           category: 'resource' | 'invoice' | 'quote'
-          storage_path: string
+          type?: 'file' | 'link'
+          storage_path?: string | null
+          url?: string | null
           original_name?: string | null
           size_bytes?: number | null
           visible_to_client?: boolean
@@ -160,6 +164,7 @@ export interface Database {
         }
         Update: {
           name?: string
+          url?: string | null
           visible_to_client?: boolean
         }
         Relationships: []
