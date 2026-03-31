@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink } from '@/app/actions/projects'
+import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink, getDownloadUrl } from '@/app/actions/projects'
 import { Project, ProjectFile } from '@/types/database'
 import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon, LinkIcon } from '@/components/ui/Icons'
 
@@ -58,9 +58,11 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     status: project?.status || 'en_cours',
     figma_url: project?.figma_url || '',
     site_url: project?.site_url || '',
-    monday_url: project?.monday_url || '',
     notes: project?.notes || '',
   })
+
+  // Download state
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   // File upload state per category
   const [uploadingCategory, setUploadingCategory] = useState<string | null>(null)
@@ -98,11 +100,24 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
         status: form.status as Project['status'],
         figma_url: form.figma_url || null,
         site_url: form.site_url || null,
-        monday_url: form.monday_url || null,
         notes: form.notes || null,
       })
       setSaved(true)
     })
+  }
+
+  async function handleDownload(fileId: string, storagePath: string, fileName: string) {
+    setDownloadingId(fileId)
+    try {
+      const url = await getDownloadUrl(storagePath)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      a.click()
+    } catch {
+      // silently fail
+    }
+    setDownloadingId(null)
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>, category: string) {
@@ -222,10 +237,6 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
           <div>
             <label className={labelClass}>URL du site</label>
             <input type="url" value={form.site_url} onChange={handleChange('site_url')} placeholder="https://monsite.fr" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Suivi de projet (Monday)</label>
-            <input type="url" value={form.monday_url} onChange={handleChange('monday_url')} placeholder="https://monday.com/boards/..." className={inputClass} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Note pour le client</label>
@@ -500,8 +511,8 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
                         )}
                       </div>
                     </div>
-                    {/* Open link */}
-                    {file.type === 'link' && file.url && (
+                    {/* Open link or download file */}
+                    {file.type === 'link' && file.url ? (
                       <a
                         href={file.url}
                         target="_blank"
@@ -511,7 +522,20 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeLinecap="round" /><polyline points="15 3 21 3 21 9" strokeLinecap="round" strokeLinejoin="round" /><line x1="10" y1="14" x2="21" y2="3" strokeLinecap="round" /></svg>
                       </a>
-                    )}
+                    ) : file.storage_path ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(file.id, file.storage_path!, file.original_name || file.name)}
+                        disabled={downloadingId === file.id}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all disabled:opacity-40"
+                        title="Télécharger"
+                      >
+                        {downloadingId === file.id
+                          ? <div className="w-3.5 h-3.5 border border-[#a1a1aa] border-t-transparent rounded-full animate-spin" />
+                          : <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" /><polyline points="7 10 12 15 17 10" strokeLinecap="round" strokeLinejoin="round" /><line x1="12" y1="15" x2="12" y2="3" strokeLinecap="round" /></svg>
+                        }
+                      </button>
+                    ) : null}
                     <button
                       onClick={() => handleToggleVisibility(file.id, file.visible_to_client)}
                       disabled={isPending}

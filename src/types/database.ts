@@ -193,6 +193,33 @@ export interface Database {
         }
         Relationships: []
       }
+      project_steps: {
+        Row: {
+          id: string
+          project_id: string
+          title: string
+          description: string | null
+          status: 'todo' | 'in_progress' | 'done'
+          position: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          title: string
+          description?: string | null
+          status?: 'todo' | 'in_progress' | 'done'
+          position?: number
+          created_at?: string
+        }
+        Update: {
+          title?: string
+          description?: string | null
+          status?: 'todo' | 'in_progress' | 'done'
+          position?: number
+        }
+        Relationships: []
+      }
       client_documents: {
         Row: {
           id: string
@@ -351,3 +378,4 @@ export type Project = Database['public']['Tables']['projects']['Row']
 export type ProjectFile = Database['public']['Tables']['project_files']['Row']
 export type Prospect = Database['public']['Tables']['prospects']['Row']
 export type ClientDocument = Database['public']['Tables']['client_documents']['Row']
+export type ProjectStep = Database['public']['Tables']['project_steps']['Row']

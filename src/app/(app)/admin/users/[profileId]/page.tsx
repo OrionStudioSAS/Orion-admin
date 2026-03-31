@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon } from '@/components/ui/Icons'
 import ProjectManager from './ProjectManager'
-import { Project, ProjectFile } from '@/types/database'
+import StepsManager from './StepsManager'
+import { Project, ProjectFile, ProjectStep } from '@/types/database'
 import { isWhatsAppConfigured } from '@/lib/whatsapp'
 
 interface Props {
@@ -28,9 +29,14 @@ export default async function AdminUserProjectPage({ params }: Props) {
   const { data: project } = await admin.from('projects').select('*').eq('profile_id', profileId).single()
 
   let files: ProjectFile[] = []
+  let steps: ProjectStep[] = []
   if (project) {
-    const { data } = await admin.from('project_files').select('*').eq('project_id', project.id).order('created_at', { ascending: false })
-    files = data || []
+    const [filesRes, stepsRes] = await Promise.all([
+      admin.from('project_files').select('*').eq('project_id', project.id).order('created_at', { ascending: false }),
+      admin.from('project_steps').select('*').eq('project_id', project.id).order('position', { ascending: true }),
+    ])
+    files = filesRes.data || []
+    steps = stepsRes.data || []
   }
 
   const whatsappConfigured = isWhatsAppConfigured()
@@ -72,13 +78,22 @@ export default async function AdminUserProjectPage({ params }: Props) {
         </div>
       </div>
 
-      <ProjectManager
-        profileId={profileId}
-        project={project as Project | null}
-        files={files}
-        whatsappConfigured={whatsappConfigured}
-        hasPhone={hasPhone}
-      />
+      <div className="space-y-5">
+        <ProjectManager
+          profileId={profileId}
+          project={project as Project | null}
+          files={files}
+          whatsappConfigured={whatsappConfigured}
+          hasPhone={hasPhone}
+        />
+        {project && (
+          <StepsManager
+            projectId={project.id}
+            profileId={profileId}
+            steps={steps}
+          />
+        )}
+      </div>
     </div>
   )
 }

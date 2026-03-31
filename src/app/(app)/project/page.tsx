@@ -48,6 +48,10 @@ export default async function ProjectPage() {
     .eq('profile_id', user.id)
     .single()
 
+  const steps = project
+    ? (await admin.from('project_steps').select('*').eq('project_id', project.id).order('position', { ascending: true })).data || []
+    : []
+
   const files = ((project?.project_files || []) as Array<{
     id: string; name: string; category: string; type: string; storage_path: string | null; url: string | null; original_name: string | null; size_bytes: number | null; visible_to_client: boolean; created_at: string
   }>).filter(f => f.visible_to_client !== false)
@@ -91,7 +95,7 @@ export default async function ProjectPage() {
         <div className="space-y-4">
 
           {/* Liens rapides */}
-          {(project.figma_url || project.site_url || project.monday_url) && (
+          {(project.figma_url || project.site_url) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {project.figma_url && (
                 <a
@@ -132,30 +136,6 @@ export default async function ProjectPage() {
                   <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
                 </a>
               )}
-              {project.monday_url && (
-                <a
-                  href={project.monday_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5 hover:border-white/20 transition-all"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                      <circle cx="6" cy="17" r="3.5" fill="#FF3D57" />
-                      <circle cx="12" cy="17" r="3.5" fill="#FFCB00" />
-                      <circle cx="18" cy="17" r="3.5" fill="#00CA72" />
-                      <path d="M3 17c0-3.5 2-8 3-10l3 7" stroke="none" />
-                      <path d="M5.5 7C6.5 9 9 14 9 17" stroke="#FF3D57" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M11.5 7C12.5 9 15 14 15 17" stroke="#FFCB00" strokeWidth="2.5" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs text-[#a1a1aa] uppercase tracking-widest mb-1">Suivi de projet</div>
-                    <div className="text-sm font-medium text-white">Voir sur Monday</div>
-                  </div>
-                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
-                </a>
-              )}
             </div>
           )}
 
@@ -166,6 +146,65 @@ export default async function ProjectPage() {
               <p className="text-sm text-[#a1a1aa] leading-relaxed whitespace-pre-wrap">{project.notes}</p>
             </div>
           )}
+
+          {/* Étapes du projet */}
+          {steps.length > 0 && (() => {
+            const donePct = Math.round(steps.filter(s => s.status === 'done').length / steps.length * 100)
+            return (
+              <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#1e1e1e]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold text-white">Avancement du projet</div>
+                    <span className="text-[10px] text-[#a1a1aa]">{steps.filter(s => s.status === 'done').length} / {steps.length} étapes</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 bg-[#1e1e1e] rounded-full overflow-hidden">
+                      <div className="h-full bg-white rounded-full transition-all" style={{ width: `${donePct}%` }} />
+                    </div>
+                    <span className="text-xs font-semibold text-white shrink-0">{donePct}%</span>
+                  </div>
+                </div>
+                <div className="px-5 py-4 space-y-3">
+                  {steps.map((step, idx) => {
+                    const isDone = step.status === 'done'
+                    const isInProgress = step.status === 'in_progress'
+                    return (
+                      <div key={step.id} className="flex items-start gap-3">
+                        {/* Icon */}
+                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-all
+                          ${isDone ? 'bg-white border-white' : isInProgress ? 'border-blue-500/50 bg-blue-500/10' : 'border-[#2a2a2a] bg-transparent'}`}>
+                          {isDone ? (
+                            <svg className="w-3 h-3 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : isInProgress ? (
+                            <div className="w-2 h-2 rounded-full bg-blue-400" />
+                          ) : (
+                            <span className="text-[8px] text-[#52525b] font-mono">{idx + 1}</span>
+                          )}
+                        </div>
+                        {/* Text */}
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className={`text-sm font-medium transition-colors ${isDone ? 'text-[#a1a1aa] line-through decoration-[#3f3f46]' : 'text-white'}`}>
+                            {step.title}
+                          </div>
+                          {step.description && (
+                            <div className="text-xs text-[#52525b] mt-0.5">{step.description}</div>
+                          )}
+                        </div>
+                        {/* Badge */}
+                        {isInProgress && (
+                          <span className="text-[9px] font-semibold text-blue-400 border border-blue-500/30 bg-blue-500/10 rounded-full px-2 py-0.5 shrink-0 mt-0.5">
+                            En cours
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Sections fichiers */}
           {[

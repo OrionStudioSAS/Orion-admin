@@ -170,3 +170,44 @@ export async function sendProjectNotification(profileId: string, message: string
   if (!profile?.phone) throw new Error('Aucun numéro de téléphone configuré pour cet utilisateur')
   await sendWhatsAppMessage(profile.phone, message)
 }
+
+export async function createStep(projectId: string, profileId: string, data: { title: string; description?: string }) {
+  const { admin } = await requireAdmin()
+  const { data: existing } = await admin.from('project_steps').select('position').eq('project_id', projectId).order('position', { ascending: false }).limit(1).single()
+  const nextPos = (existing?.position ?? -1) + 1
+  const { error } = await admin.from('project_steps').insert({
+    project_id: projectId,
+    title: data.title,
+    description: data.description || null,
+    status: 'todo',
+    position: nextPos,
+  })
+  if (error) throw new Error(error.message)
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+export async function updateStep(stepId: string, profileId: string, data: { title?: string; description?: string | null; status?: 'todo' | 'in_progress' | 'done' }) {
+  const { admin } = await requireAdmin()
+  const { error } = await admin.from('project_steps').update(data).eq('id', stepId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+export async function deleteStep(stepId: string, profileId: string) {
+  const { admin } = await requireAdmin()
+  const { error } = await admin.from('project_steps').delete().eq('id', stepId)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+export async function reorderSteps(projectId: string, profileId: string, orderedIds: string[]) {
+  const { admin } = await requireAdmin()
+  await Promise.all(orderedIds.map((id, idx) =>
+    admin.from('project_steps').update({ position: idx }).eq('id', id).eq('project_id', projectId)
+  ))
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
