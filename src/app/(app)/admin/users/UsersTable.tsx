@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { Profile, FlowAccess } from '@/types/database'
-import { PlusIcon, EditIcon, CheckIcon, XIcon, KeyIcon } from '@/components/ui/Icons'
+import { PlusIcon, EditIcon, CheckIcon, XIcon, KeyIcon, FolderIcon } from '@/components/ui/Icons'
 import { updateUserRole, grantFlowAccess, revokeFlowAccess } from '@/app/actions/users'
 
 interface Props {
@@ -182,13 +183,21 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
                   <option value="admin">Admin</option>
                 </select>
 
+                <Link
+                  href={`/admin/users/${profile.id}`}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+                  title="Gérer le projet"
+                >
+                  <FolderIcon className="w-3 h-3" />
+                  <span className="hidden sm:inline">Projet</span>
+                </Link>
                 <button
                   onClick={() => setEditingId(isEditing ? null : profile.id)}
                   className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-all
                     ${isEditing ? 'bg-white text-black' : 'text-[#71717a] hover:text-white hover:bg-white/5'}`}
                 >
                   <EditIcon className="w-3 h-3" />
-                  Accès
+                  <span className="hidden sm:inline">Accès</span>
                 </button>
               </div>
 

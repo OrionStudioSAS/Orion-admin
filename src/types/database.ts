@@ -99,6 +99,65 @@ export interface Database {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          id: string
+          profile_id: string
+          plan_type: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
+          status: 'en_cours' | 'termine' | 'en_pause'
+          figma_url: string | null
+          site_url: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
+          status?: 'en_cours' | 'termine' | 'en_pause'
+          figma_url?: string | null
+          site_url?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
+          status?: 'en_cours' | 'termine' | 'en_pause'
+          figma_url?: string | null
+          site_url?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_files: {
+        Row: {
+          id: string
+          project_id: string
+          name: string
+          category: 'resource' | 'invoice' | 'quote'
+          storage_path: string
+          original_name: string | null
+          size_bytes: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          name: string
+          category: 'resource' | 'invoice' | 'quote'
+          storage_path: string
+          original_name?: string | null
+          size_bytes?: number | null
+          created_at?: string
+        }
+        Update: {
+          name?: string
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           id: string
@@ -196,3 +255,5 @@ export type FlowAccess = Database['public']['Tables']['flow_access']['Row']
 export type FlowExecution = Database['public']['Tables']['flow_executions']['Row']
 export type AccessRequest = Database['public']['Tables']['access_requests']['Row']
 export type SupportMessage = Database['public']['Tables']['support_messages']['Row']
+export type Project = Database['public']['Tables']['projects']['Row']
+export type ProjectFile = Database['public']['Tables']['project_files']['Row']
