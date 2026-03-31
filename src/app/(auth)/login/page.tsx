@@ -53,13 +53,13 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
-          <div className="text-[#3f3f46] text-xs tracking-widest uppercase mb-6 font-medium">Automatisez votre croissance</div>
+          <div className="text-[#a1a1aa] text-xs tracking-widest uppercase mb-6 font-medium">Automatisez votre croissance</div>
           <h1 className="text-4xl font-light text-white leading-tight mb-4">
             Gérez vos<br />
             <span className="font-semibold">automations</span><br />
             en un clic
           </h1>
-          <p className="text-[#71717a] text-sm leading-relaxed max-w-xs">
+          <p className="text-[#a1a1aa] text-sm leading-relaxed max-w-xs">
             Déclenchez vos workflows N8N, créez du contenu, gérez vos pages CMS — tout depuis une interface unifiée.
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
               </div>
             ))}
           </div>
-          <span className="text-[#71717a] text-xs">Accès réservé — clients & équipe Orion</span>
+          <span className="text-[#a1a1aa] text-xs">Accès réservé — clients & équipe Orion</span>
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-white mb-2">Connexion</h2>
-            <p className="text-[#71717a] text-sm">Accédez à votre espace automations</p>
+            <p className="text-[#a1a1aa] text-sm">Accédez à votre espace automations</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -135,7 +135,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-[#3f3f46] text-xs text-center mt-8">
+          <p className="text-[#a1a1aa] text-xs text-center mt-8">
             Accès sur invitation uniquement.<br />
             Contactez votre administrateur.
           </p>

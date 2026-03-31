@@ -62,8 +62,8 @@ export default async function ProjectPage() {
       {/* Header */}
       <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
-          <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
-          <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Espace client</span>
+          <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
+          <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Espace client</span>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl md:text-3xl font-semibold text-white">Mon projet</h1>
@@ -73,7 +73,7 @@ export default async function ProjectPage() {
             </span>
           )}
           {project?.plan_type && (
-            <span className="text-[10px] text-[#71717a] bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+            <span className="text-[10px] text-[#a1a1aa] bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
               {PLAN_LABELS[project.plan_type]}
             </span>
           )}
@@ -82,9 +82,9 @@ export default async function ProjectPage() {
 
       {!project ? (
         <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
-          <FolderIcon className="w-8 h-8 text-[#2a2a2a] mx-auto mb-3" />
-          <p className="text-[#3f3f46] text-sm">Votre projet est en cours de configuration.</p>
-          <p className="text-[#2a2a2a] text-xs mt-1">Votre espace sera disponible très prochainement.</p>
+          <FolderIcon className="w-8 h-8 text-[#52525b] mx-auto mb-3" />
+          <p className="text-[#a1a1aa] text-sm">Votre projet est en cours de configuration.</p>
+          <p className="text-[#52525b] text-xs mt-1">Votre espace sera disponible très prochainement.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -105,10 +105,10 @@ export default async function ProjectPage() {
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-[#3f3f46] uppercase tracking-widest mb-1">Maquette</div>
+                    <div className="text-xs text-[#a1a1aa] uppercase tracking-widest mb-1">Maquette</div>
                     <div className="text-sm font-medium text-white">Voir sur Figma</div>
                   </div>
-                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#3f3f46] group-hover:text-white transition-colors shrink-0" />
+                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
                 </a>
               )}
               {project.site_url && (
@@ -125,10 +125,10 @@ export default async function ProjectPage() {
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-[#3f3f46] uppercase tracking-widest mb-1">Site web</div>
+                    <div className="text-xs text-[#a1a1aa] uppercase tracking-widest mb-1">Site web</div>
                     <div className="text-sm font-medium text-white truncate">{project.site_url.replace(/^https?:\/\//, '')}</div>
                   </div>
-                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#3f3f46] group-hover:text-white transition-colors shrink-0" />
+                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
                 </a>
               )}
             </div>
@@ -137,7 +137,7 @@ export default async function ProjectPage() {
           {/* Notes de l'équipe */}
           {project.notes && (
             <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-5">
-              <div className="text-[10px] text-[#71717a] uppercase tracking-widest font-medium mb-3">Note de l'équipe</div>
+              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-3">Note de l'équipe</div>
               <p className="text-sm text-[#a1a1aa] leading-relaxed whitespace-pre-wrap">{project.notes}</p>
             </div>
           )}
@@ -152,32 +152,32 @@ export default async function ProjectPage() {
               <div className="px-5 py-4 border-b border-[#1e1e1e] flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold text-white">{label}</div>
-                  <div className="text-xs text-[#3f3f46] mt-0.5">{desc}</div>
+                  <div className="text-xs text-[#a1a1aa] mt-0.5">{desc}</div>
                 </div>
-                <span className="text-[10px] text-[#3f3f46]">{sectionFiles.length} fichier{sectionFiles.length > 1 ? 's' : ''}</span>
+                <span className="text-[10px] text-[#a1a1aa]">{sectionFiles.length} fichier{sectionFiles.length > 1 ? 's' : ''}</span>
               </div>
               {sectionFiles.length === 0 ? (
                 <div className="px-5 py-6 text-center">
-                  <p className="text-[#2a2a2a] text-xs">Aucun fichier disponible pour le moment.</p>
+                  <p className="text-[#52525b] text-xs">Aucun fichier disponible pour le moment.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-[#0f0f0f]">
                   {sectionFiles.map(file => (
                     <div key={file.id} className="flex items-center gap-3 md:gap-4 px-5 py-3.5 bg-[#080808]/50">
                       <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
-                        <svg className="w-3.5 h-3.5 text-[#71717a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <svg className="w-3.5 h-3.5 text-[#a1a1aa]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round" />
                           <polyline points="14 2 14 8 20 8" strokeLinejoin="round" />
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-white truncate">{file.name}</div>
-                        <div className="text-[11px] text-[#3f3f46] mt-0.5">
+                        <div className="text-[11px] text-[#a1a1aa] mt-0.5">
                           {file.original_name && <span>{file.original_name}</span>}
                           {file.size_bytes && <span className="ml-2">{formatBytes(file.size_bytes)}</span>}
                         </div>
                       </div>
-                      <div className="text-[10px] text-[#3f3f46] shrink-0 hidden sm:block">
+                      <div className="text-[10px] text-[#a1a1aa] shrink-0 hidden sm:block">
                         {new Date(file.created_at).toLocaleDateString('fr-FR')}
                       </div>
                       <DownloadButton storagePath={file.storage_path} fileName={file.original_name || file.name} />

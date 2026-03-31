@@ -96,7 +96,7 @@ export default function FlowsManager({ flows }: Props) {
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Nom *</label>
+          <label className="block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Nom *</label>
           <input
             type="text"
             value={form.name}
@@ -107,7 +107,7 @@ export default function FlowsManager({ flows }: Props) {
           />
         </div>
         <div>
-          <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Catégorie</label>
+          <label className="block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Catégorie</label>
           <select
             value={form.category}
             onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
@@ -117,7 +117,7 @@ export default function FlowsManager({ flows }: Props) {
           </select>
         </div>
         <div className="col-span-1 sm:col-span-2">
-          <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Webhook URL *</label>
+          <label className="block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Webhook URL *</label>
           <input
             type="url"
             value={form.webhook_url}
@@ -128,7 +128,7 @@ export default function FlowsManager({ flows }: Props) {
           />
         </div>
         <div className="col-span-1 sm:col-span-2">
-          <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Description</label>
+          <label className="block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Description</label>
           <textarea
             value={form.description}
             onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
@@ -138,7 +138,7 @@ export default function FlowsManager({ flows }: Props) {
           />
         </div>
         <div>
-          <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Icône</label>
+          <label className="block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Icône</label>
           <div className="flex gap-2">
             {ICONS.map(icon => (
               <button
@@ -148,18 +148,18 @@ export default function FlowsManager({ flows }: Props) {
                 className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-all
                   ${form.icon === icon ? 'bg-white border-white' : 'bg-[#080808] border-[#1e1e1e] hover:border-white/20'}`}
               >
-                <FlowIcon icon={icon} className={`w-4 h-4 ${form.icon === icon ? 'text-black' : 'text-[#71717a]'}`} />
+                <FlowIcon icon={icon} className={`w-4 h-4 ${form.icon === icon ? 'text-black' : 'text-[#a1a1aa]'}`} />
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="block text-[10px] text-[#71717a] uppercase tracking-widest mb-2">Statut</label>
+          <label className="block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Statut</label>
           <button
             type="button"
             onClick={() => setForm(p => ({ ...p, is_active: !p.is_active }))}
             className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all
-              ${form.is_active ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-[#080808] border-[#1e1e1e] text-[#71717a]'}`}
+              ${form.is_active ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-[#080808] border-[#1e1e1e] text-[#a1a1aa]'}`}
           >
             {form.is_active ? <CheckIcon className="w-3 h-3" /> : <XIcon className="w-3 h-3" />}
             {form.is_active ? 'Actif' : 'Inactif'}
@@ -180,7 +180,7 @@ export default function FlowsManager({ flows }: Props) {
           <BoltIcon className="w-3.5 h-3.5" />
           {loading ? 'Enregistrement...' : editingId ? 'Mettre à jour' : 'Créer'}
         </button>
-        <button type="button" onClick={cancelForm} className="text-[#71717a] text-xs px-4 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">
+        <button type="button" onClick={cancelForm} className="text-[#a1a1aa] text-xs px-4 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">
           Annuler
         </button>
       </div>
@@ -190,7 +190,7 @@ export default function FlowsManager({ flows }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <span className="text-sm text-[#71717a]">{flows.length} flow{flows.length > 1 ? 's' : ''}</span>
+        <span className="text-sm text-[#a1a1aa]">{flows.length} flow{flows.length > 1 ? 's' : ''}</span>
         <button
           onClick={() => { setShowCreate(!showCreate); setEditingId(null) }}
           className="flex items-center gap-2 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 transition-all"
@@ -214,34 +214,34 @@ export default function FlowsManager({ flows }: Props) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-white">{flow.name}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium
-                      ${flow.is_active ? 'text-green-400 bg-green-500/10' : 'text-[#71717a] bg-white/5'}`}>
+                      ${flow.is_active ? 'text-green-400 bg-green-500/10' : 'text-[#a1a1aa] bg-white/5'}`}>
                       {flow.is_active ? 'Actif' : 'Inactif'}
                     </span>
                   </div>
-                  <div className="text-xs text-[#3f3f46] truncate mt-0.5">{flow.webhook_url}</div>
+                  <div className="text-xs text-[#a1a1aa] truncate mt-0.5">{flow.webhook_url}</div>
                 </div>
                 {flow.category && (
-                  <span className="text-[10px] text-[#71717a] uppercase tracking-widest hidden md:block">{flow.category}</span>
+                  <span className="text-[10px] text-[#a1a1aa] uppercase tracking-widest hidden md:block">{flow.category}</span>
                 )}
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleToggleActive(flow)}
                     disabled={isPending}
                     title={flow.is_active ? 'Désactiver' : 'Activer'}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
                   >
                     {flow.is_active ? <XIcon className="w-3.5 h-3.5" /> : <CheckIcon className="w-3.5 h-3.5" />}
                   </button>
                   <button
                     onClick={() => startEdit(flow)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
                   >
                     <EditIcon className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(flow.id)}
                     disabled={isPending}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-red-400 hover:bg-red-500/10 transition-all"
                   >
                     <TrashIcon className="w-3.5 h-3.5" />
                   </button>

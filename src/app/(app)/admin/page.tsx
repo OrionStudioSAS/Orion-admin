@@ -34,11 +34,11 @@ export default async function AdminPage() {
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
-          <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
-          <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Administration</span>
+          <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
+          <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Administration</span>
         </div>
         <h1 className="text-2xl md:text-3xl font-semibold text-white">Panneau d'admin</h1>
-        <p className="text-[#71717a] text-sm mt-2">Vue d'ensemble et gestion de la plateforme</p>
+        <p className="text-[#a1a1aa] text-sm mt-2">Vue d'ensemble et gestion de la plateforme</p>
       </div>
 
       {/* Stats — 1 col mobile, 3 col desktop */}
@@ -48,12 +48,12 @@ export default async function AdminPage() {
             className="group bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4 md:p-5 hover:border-white/20 hover:bg-[#141414] transition-all flex sm:flex-col items-center sm:items-start gap-4 sm:gap-0"
           >
             <div className="flex sm:w-full items-center justify-between sm:mb-3">
-              <Icon className="w-4 h-4 text-[#71717a] group-hover:text-white transition-colors" />
-              <ArrowRightIcon className="w-3.5 h-3.5 text-[#3f3f46] group-hover:text-[#71717a] transition-colors hidden sm:block" />
+              <Icon className="w-4 h-4 text-[#a1a1aa] group-hover:text-white transition-colors" />
+              <ArrowRightIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-[#a1a1aa] transition-colors hidden sm:block" />
             </div>
             <div>
               <div className="text-2xl font-semibold text-white">{value}</div>
-              <div className="text-xs text-[#71717a] mt-0.5">{label}</div>
+              <div className="text-xs text-[#a1a1aa] mt-0.5">{label}</div>
             </div>
           </Link>
         ))}
@@ -68,8 +68,8 @@ export default async function AdminPage() {
               <Icon className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-sm font-semibold text-white mb-2">{title}</h3>
-            <p className="text-[#71717a] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{description}</p>
-            <div className="flex items-center gap-2 text-xs text-[#71717a] group-hover:text-white transition-colors">
+            <p className="text-[#a1a1aa] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{description}</p>
+            <div className="flex items-center gap-2 text-xs text-[#a1a1aa] group-hover:text-white transition-colors">
               <span>Gérer</span>
               <ArrowRightIcon className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>

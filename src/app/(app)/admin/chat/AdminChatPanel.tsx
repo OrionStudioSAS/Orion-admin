@@ -84,13 +84,13 @@ export default function AdminChatPanel({ initialConversations, adminId }: Props)
       `}>
         <div className="px-4 py-3.5 border-b border-[#1e1e1e] shrink-0">
           <div className="text-xs font-semibold text-white uppercase tracking-widest">Conversations</div>
-          <div className="text-[11px] text-[#71717a] mt-0.5">{conversations.length} membre{conversations.length > 1 ? 's' : ''}</div>
+          <div className="text-[11px] text-[#a1a1aa] mt-0.5">{conversations.length} membre{conversations.length > 1 ? 's' : ''}</div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
             <div className="p-6 text-center">
-              <p className="text-[#3f3f46] text-xs">Aucune conversation.</p>
+              <p className="text-[#a1a1aa] text-xs">Aucune conversation.</p>
             </div>
           )}
           {conversations.map((conv) => {
@@ -112,17 +112,17 @@ export default function AdminChatPanel({ initialConversations, adminId }: Props)
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-white truncate">{name}</span>
-                    <span className="text-[9px] text-[#3f3f46] shrink-0">
+                    <span className="text-[9px] text-[#a1a1aa] shrink-0">
                       {isToday
                         ? date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
                         : date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
                   {conv.profile?.company && (
-                    <div className="text-[10px] text-[#3f3f46] mt-0.5">{conv.profile.company}</div>
+                    <div className="text-[10px] text-[#a1a1aa] mt-0.5">{conv.profile.company}</div>
                   )}
                   <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-[#71717a] truncate max-w-[160px]">
+                    <p className="text-xs text-[#a1a1aa] truncate max-w-[160px]">
                       {conv.latestMessage.is_admin_sender ? 'Vous : ' : ''}
                       {conv.latestMessage.content}
                     </p>
@@ -144,10 +144,10 @@ export default function AdminChatPanel({ initialConversations, adminId }: Props)
         {!selected ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-              <MessageIcon className="w-5 h-5 text-[#3f3f46]" />
+              <MessageIcon className="w-5 h-5 text-[#a1a1aa]" />
             </div>
-            <p className="text-[#71717a] text-sm">Sélectionnez une conversation</p>
-            <p className="text-[#3f3f46] text-xs mt-1">pour voir les messages</p>
+            <p className="text-[#a1a1aa] text-sm">Sélectionnez une conversation</p>
+            <p className="text-[#a1a1aa] text-xs mt-1">pour voir les messages</p>
           </div>
         ) : (
           <>
@@ -155,7 +155,7 @@ export default function AdminChatPanel({ initialConversations, adminId }: Props)
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[#1e1e1e] shrink-0">
               <button
                 onClick={() => setShowList(true)}
-                className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+                className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
               >
                 ←
               </button>
@@ -169,7 +169,7 @@ export default function AdminChatPanel({ initialConversations, adminId }: Props)
                   {selected.profile?.full_name || selected.profile?.email}
                 </div>
                 {selected.profile?.company && (
-                  <div className="text-[11px] text-[#71717a]">{selected.profile.company}</div>
+                  <div className="text-[11px] text-[#a1a1aa]">{selected.profile.company}</div>
                 )}
               </div>
             </div>

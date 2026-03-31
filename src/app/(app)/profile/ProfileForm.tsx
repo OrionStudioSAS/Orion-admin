@@ -10,7 +10,7 @@ interface Props {
 }
 
 const inputClass = "w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
-const labelClass = "block text-[10px] text-[#71717a] uppercase tracking-widest mb-2"
+const labelClass = "block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2"
 
 export default function ProfileForm({ profile }: Props) {
   const [isPending, startTransition] = useTransition()
@@ -134,7 +134,7 @@ export default function ProfileForm({ profile }: Props) {
           {saved ? <CheckIcon className="w-3.5 h-3.5" /> : null}
           {isPending ? 'Enregistrement...' : saved ? 'Enregistré !' : 'Enregistrer'}
         </button>
-        <span className="text-[#3f3f46] text-xs">
+        <span className="text-[#a1a1aa] text-xs">
           {profile.role === 'admin' ? 'Admin' : 'Client'}
         </span>
       </div>

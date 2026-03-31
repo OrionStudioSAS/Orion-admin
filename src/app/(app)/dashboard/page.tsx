@@ -42,11 +42,11 @@ export default async function DashboardPage() {
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
-          <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
-          <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Automations</span>
+          <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
+          <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Automations</span>
         </div>
         <h1 className="text-2xl md:text-3xl font-semibold text-white">{greeting}, {firstName}</h1>
-        <p className="text-[#71717a] text-sm mt-2">
+        <p className="text-[#a1a1aa] text-sm mt-2">
           {flows.length === 0
             ? "Aucun flow disponible pour le moment."
             : `${accessibleCount} flow${accessibleCount > 1 ? 's' : ''} accessible${accessibleCount > 1 ? 's' : ''}${!isAdmin && flows.length > accessibleCount ? ` · ${flows.length - accessibleCount} verrouillé${flows.length - accessibleCount > 1 ? 's' : ''}` : ''}`}
@@ -55,7 +55,7 @@ export default async function DashboardPage() {
 
       {flows.length === 0 ? (
         <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
-          <p className="text-[#3f3f46] text-sm">Aucun flow disponible pour le moment.</p>
+          <p className="text-[#a1a1aa] text-sm">Aucun flow disponible pour le moment.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -84,13 +84,13 @@ function FlowCard({ flow }: { flow: Flow }) {
         <FlowIcon icon={flow.icon} className="w-4 h-4 text-white" />
       </div>
       {flow.category && (
-        <span className="text-[10px] text-[#3f3f46] uppercase tracking-widest font-medium mb-2">{flow.category}</span>
+        <span className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-2">{flow.category}</span>
       )}
       <h3 className="text-sm font-semibold text-white mb-2">{flow.name}</h3>
       {flow.description && (
-        <p className="text-[#71717a] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{flow.description}</p>
+        <p className="text-[#a1a1aa] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{flow.description}</p>
       )}
-      <div className="flex items-center gap-2 text-xs text-[#71717a] group-hover:text-white transition-colors mt-auto">
+      <div className="flex items-center gap-2 text-xs text-[#a1a1aa] group-hover:text-white transition-colors mt-auto">
         <span>Lancer le flow</span>
         <ArrowRightIcon className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
       </div>
@@ -103,21 +103,21 @@ function LockedFlowCard({ flow, alreadyRequested }: { flow: Flow; alreadyRequest
   return (
     <div className="relative flex flex-col bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl p-5 md:p-6 opacity-60">
       <div className="w-10 h-10 rounded-xl bg-white/3 border border-white/5 flex items-center justify-center mb-4 md:mb-5">
-        <FlowIcon icon={flow.icon} className="w-4 h-4 text-[#3f3f46]" />
+        <FlowIcon icon={flow.icon} className="w-4 h-4 text-[#a1a1aa]" />
       </div>
       {flow.category && (
-        <span className="text-[10px] text-[#2a2a2a] uppercase tracking-widest font-medium mb-2">{flow.category}</span>
+        <span className="text-[10px] text-[#52525b] uppercase tracking-widest font-medium mb-2">{flow.category}</span>
       )}
-      <h3 className="text-sm font-semibold text-[#71717a] mb-2">{flow.name}</h3>
+      <h3 className="text-sm font-semibold text-[#a1a1aa] mb-2">{flow.name}</h3>
       {flow.description && (
-        <p className="text-[#3f3f46] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{flow.description}</p>
+        <p className="text-[#a1a1aa] text-xs leading-relaxed mb-4 md:mb-5 flex-1">{flow.description}</p>
       )}
       <div className="mt-auto">
         <RequestAccessButton flowId={flow.id} alreadyRequested={alreadyRequested} />
       </div>
       {/* Icône cadenas */}
       <div className="absolute top-4 right-4">
-        <LockIcon className="w-3.5 h-3.5 text-[#2a2a2a]" />
+        <LockIcon className="w-3.5 h-3.5 text-[#52525b]" />
       </div>
     </div>
   )

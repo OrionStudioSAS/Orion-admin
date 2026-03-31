@@ -27,18 +27,18 @@ export default async function HistoryPage() {
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
-          <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
-          <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Historique</span>
+          <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
+          <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Historique</span>
         </div>
         <h1 className="text-2xl md:text-3xl font-semibold text-white">Exécutions</h1>
-        <p className="text-[#71717a] text-sm mt-2">
+        <p className="text-[#a1a1aa] text-sm mt-2">
           {isAdmin ? 'Toutes les exécutions' : 'Vos dernières exécutions'}
         </p>
       </div>
 
       {!executions || executions.length === 0 ? (
         <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
-          <p className="text-[#3f3f46] text-sm">Aucune exécution pour le moment.</p>
+          <p className="text-[#a1a1aa] text-sm">Aucune exécution pour le moment.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -68,13 +68,13 @@ export default async function HistoryPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-white truncate">{flow?.name || 'Flow supprimé'}</span>
                       {isAdmin && execProfile && (
-                        <span className="text-[10px] text-[#71717a] bg-white/5 border border-white/5 px-2 py-0.5 rounded-full shrink-0">
+                        <span className="text-[10px] text-[#a1a1aa] bg-white/5 border border-white/5 px-2 py-0.5 rounded-full shrink-0">
                           {execProfile.company || execProfile.full_name || execProfile.email}
                         </span>
                       )}
                     </div>
                     {flow?.category && (
-                      <div className="text-[11px] text-[#3f3f46] uppercase tracking-wider mt-0.5 hidden sm:block">{flow.category}</div>
+                      <div className="text-[11px] text-[#a1a1aa] uppercase tracking-wider mt-0.5 hidden sm:block">{flow.category}</div>
                     )}
                   </div>
 
@@ -85,7 +85,7 @@ export default async function HistoryPage() {
                     {exec.status}
                   </span>
 
-                  <div className="text-[#3f3f46] text-xs shrink-0 text-right hidden sm:block">
+                  <div className="text-[#a1a1aa] text-xs shrink-0 text-right hidden sm:block">
                     <div>{date.toLocaleDateString('fr-FR')}</div>
                     <div>{date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
                   </div>
@@ -96,8 +96,8 @@ export default async function HistoryPage() {
                   <div className="border-t border-[#1a1a1a] px-3 md:px-5 py-2.5 flex flex-wrap gap-x-5 gap-y-1.5 bg-[#080808]">
                     {payloadEntries.map(([key, value]) => (
                       <div key={key} className="flex items-baseline gap-1.5 min-w-0">
-                        <span className="text-[9px] uppercase tracking-widest text-[#3f3f46] font-medium shrink-0">{key}</span>
-                        <span className="text-xs text-[#71717a] truncate max-w-[240px]">{String(value)}</span>
+                        <span className="text-[9px] uppercase tracking-widest text-[#a1a1aa] font-medium shrink-0">{key}</span>
+                        <span className="text-xs text-[#a1a1aa] truncate max-w-[240px]">{String(value)}</span>
                       </div>
                     ))}
                   </div>

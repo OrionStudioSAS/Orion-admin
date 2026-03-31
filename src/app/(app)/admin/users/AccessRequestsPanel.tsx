@@ -58,11 +58,11 @@ export default function AccessRequestsPanel({ requests }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">{name}</div>
-                <div className="text-xs text-[#71717a] mt-0.5">
+                <div className="text-xs text-[#a1a1aa] mt-0.5">
                   souhaite accéder à <span className="text-white">{flow?.name || 'Flow inconnu'}</span>
                 </div>
               </div>
-              <div className="text-[#3f3f46] text-[10px] shrink-0 hidden sm:block">
+              <div className="text-[#a1a1aa] text-[10px] shrink-0 hidden sm:block">
                 {date.toLocaleDateString('fr-FR')}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -79,7 +79,7 @@ export default function AccessRequestsPanel({ requests }: Props) {
                   onClick={() => handleReject(req)}
                   disabled={isPending}
                   title="Refuser"
-                  className="flex items-center gap-1.5 text-[10px] font-semibold text-[#71717a] hover:text-red-400 hover:bg-red-500/10 border border-[#1e1e1e] hover:border-red-500/20 px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 text-[10px] font-semibold text-[#a1a1aa] hover:text-red-400 hover:bg-red-500/10 border border-[#1e1e1e] hover:border-red-500/20 px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50"
                 >
                   <XIcon className="w-3 h-3" />
                   <span className="hidden sm:inline">Refuser</span>

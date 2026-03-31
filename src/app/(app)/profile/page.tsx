@@ -17,11 +17,11 @@ export default async function ProfilePage() {
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       <div className="mb-8 md:mb-10">
         <div className="flex items-center gap-2 mb-3">
-          <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
-          <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Compte</span>
+          <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
+          <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Compte</span>
         </div>
         <h1 className="text-2xl md:text-3xl font-semibold text-white">Mon profil</h1>
-        <p className="text-[#71717a] text-sm mt-2">Gérez vos informations personnelles</p>
+        <p className="text-[#a1a1aa] text-sm mt-2">Gérez vos informations personnelles</p>
       </div>
 
       <ProfileForm profile={profile} />

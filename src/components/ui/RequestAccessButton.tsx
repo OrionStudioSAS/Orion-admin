@@ -31,7 +31,7 @@ export default function RequestAccessButton({ flowId, alreadyRequested }: Props)
   if (sent) {
     return (
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 text-[10px] text-[#71717a]">
+        <div className="flex items-center gap-1.5 text-[10px] text-[#a1a1aa]">
           <CheckIcon className="w-3 h-3" />
           Demande envoyée
         </div>
@@ -39,7 +39,7 @@ export default function RequestAccessButton({ flowId, alreadyRequested }: Props)
           onClick={handleCancel}
           disabled={isPending}
           title="Annuler la demande"
-          className="flex items-center gap-1 text-[10px] text-[#3f3f46] hover:text-red-400 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 text-[10px] text-[#a1a1aa] hover:text-red-400 transition-colors disabled:opacity-50"
         >
           <XIcon className="w-3 h-3" />
           Annuler
@@ -52,7 +52,7 @@ export default function RequestAccessButton({ flowId, alreadyRequested }: Props)
     <button
       onClick={handleRequest}
       disabled={isPending}
-      className="flex items-center gap-1.5 text-[10px] text-[#71717a] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+      className="flex items-center gap-1.5 text-[10px] text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
     >
       <BellIcon className="w-3 h-3" />
       {isPending ? 'Envoi...' : "Demander l'accès"}

@@ -26,7 +26,7 @@ export default function DownloadButton({ storagePath, fileName }: { storagePath:
     <button
       onClick={handleDownload}
       disabled={loading}
-      className="flex items-center gap-1.5 text-xs text-[#71717a] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+      className="flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
     >
       <DownloadIcon className="w-3.5 h-3.5" />
       {loading ? 'Chargement...' : 'Télécharger'}

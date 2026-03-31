@@ -55,13 +55,13 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           <LogoIcon className="w-7 h-7 shrink-0" />
           <div>
             <div className="text-sm font-semibold tracking-wide text-white">Orion Studio</div>
-            <div className="text-[11px] text-[#71717a] mt-0.5">Automations</div>
+            <div className="text-[11px] text-[#a1a1aa] mt-0.5">Automations</div>
           </div>
         </div>
         {/* Close button mobile */}
         <button
           onClick={() => setOpen(false)}
-          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
         >
           <XIcon className="w-4 h-4" />
         </button>
@@ -70,7 +70,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
       {/* Nav */}
       <nav className="flex-1 py-4 px-3">
         <div className="mb-1 px-3 pb-2">
-          <span className="text-[10px] font-medium tracking-widest text-[#3f3f46] uppercase">Navigation</span>
+          <span className="text-[10px] font-medium tracking-widest text-[#a1a1aa] uppercase">Navigation</span>
         </div>
         {navItems.map(({ href, icon: Icon, label, badge }) => {
           const active = pathname === href || (
@@ -120,18 +120,18 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
             <div className="text-sm font-medium text-white truncate group-hover:text-white/80 transition-colors">
               {profile.full_name || 'Utilisateur'}
             </div>
-            <div className="text-[11px] text-[#71717a] truncate">{profile.email}</div>
+            <div className="text-[11px] text-[#a1a1aa] truncate">{profile.email}</div>
           </div>
-          <UserCircleIcon className="w-3.5 h-3.5 text-[#3f3f46] group-hover:text-[#71717a] transition-colors shrink-0" />
+          <UserCircleIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-[#a1a1aa] transition-colors shrink-0" />
         </Link>
         <div className="flex items-center justify-between">
           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium tracking-wider uppercase
-            ${isAdmin ? 'border-white/20 text-white/60 bg-white/5' : 'border-[#1e1e1e] text-[#71717a]'}`}>
+            ${isAdmin ? 'border-white/20 text-white/60 bg-white/5' : 'border-[#1e1e1e] text-[#a1a1aa]'}`}>
             {isAdmin ? 'Admin' : 'Client'}
           </span>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 text-[#71717a] hover:text-white text-xs transition-colors"
+            className="flex items-center gap-1.5 text-[#a1a1aa] hover:text-white text-xs transition-colors"
           >
             <LogOutIcon className="w-3.5 h-3.5" />
             Déconnexion
@@ -157,7 +157,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           )}
           <button
             onClick={() => setOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#71717a] hover:text-white hover:bg-white/5 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
           >
             <MenuIcon className="w-5 h-5" />
           </button>

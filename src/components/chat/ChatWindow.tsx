@@ -118,8 +118,8 @@ export default function ChatWindow({ profileId, isAdmin, initialMessages }: Prop
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <p className="text-[#3f3f46] text-sm">Aucun message pour le moment.</p>
-            <p className="text-[#2a2a2a] text-xs mt-1">
+            <p className="text-[#a1a1aa] text-sm">Aucun message pour le moment.</p>
+            <p className="text-[#52525b] text-xs mt-1">
               {isAdmin ? 'En attente d\'un message du membre.' : 'Envoyez un message à notre équipe.'}
             </p>
           </div>
@@ -137,7 +137,7 @@ export default function ChatWindow({ profileId, isAdmin, initialMessages }: Prop
                 }`}>
                   {msg.content}
                 </div>
-                <div className={`text-[9px] mt-1 px-1 text-[#3f3f46] ${isOwn ? 'text-right' : 'text-left'}`}>
+                <div className={`text-[9px] mt-1 px-1 text-[#a1a1aa] ${isOwn ? 'text-right' : 'text-left'}`}>
                   {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   {' · '}
                   {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}

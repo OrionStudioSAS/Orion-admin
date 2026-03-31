@@ -74,8 +74,8 @@ export default function FlowForm({ flow, userId }: Props) {
           <CheckIcon className="w-5 h-5 text-green-400" />
         </div>
         <h3 className="text-white font-medium mb-1">Succès !</h3>
-        <p className="text-[#71717a] text-sm">{message}</p>
-        <p className="text-[#3f3f46] text-xs mt-1">Redirection en cours...</p>
+        <p className="text-[#a1a1aa] text-sm">{message}</p>
+        <p className="text-[#a1a1aa] text-xs mt-1">Redirection en cours...</p>
       </div>
     )
   }
@@ -86,7 +86,7 @@ export default function FlowForm({ flow, userId }: Props) {
         <div key={field.name}>
           <label className="block text-xs font-medium text-[#a1a1aa] mb-2 tracking-wide uppercase">
             {field.label}
-            {field.required && <span className="text-[#3f3f46] ml-1">*</span>}
+            {field.required && <span className="text-[#a1a1aa] ml-1">*</span>}
           </label>
 
           {field.type === 'textarea' ? (
@@ -142,7 +142,7 @@ export default function FlowForm({ flow, userId }: Props) {
         <button
           type="button"
           onClick={() => router.back()}
-          className="text-[#71717a] text-sm px-4 py-2.5 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+          className="text-[#a1a1aa] text-sm px-4 py-2.5 rounded-lg hover:text-white hover:bg-white/5 transition-all"
         >
           Annuler
         </button>

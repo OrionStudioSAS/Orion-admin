@@ -26,8 +26,8 @@ export default async function ChatPage() {
       {/* Header */}
       <div className="mb-5 shrink-0">
         <div className="flex items-center gap-2 mb-3">
-          <StarIcon className="w-2.5 h-2.5 text-[#3f3f46]" />
-          <span className="text-[#3f3f46] text-xs tracking-widest uppercase font-medium">Support</span>
+          <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
+          <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Support</span>
         </div>
         <div className="flex items-center gap-3">
           <h1 className="text-2xl md:text-3xl font-semibold text-white">Messages</h1>
@@ -36,7 +36,7 @@ export default async function ChatPage() {
             En ligne
           </div>
         </div>
-        <p className="text-[#71717a] text-sm mt-1">Échangez directement avec notre équipe</p>
+        <p className="text-[#a1a1aa] text-sm mt-1">Échangez directement avec notre équipe</p>
       </div>
 
       {/* Chat */}
@@ -48,7 +48,7 @@ export default async function ChatPage() {
           </div>
           <div>
             <div className="text-sm font-medium text-white">Orion Studio</div>
-            <div className="text-[11px] text-[#71717a]">Support & Assistance</div>
+            <div className="text-[11px] text-[#a1a1aa]">Support & Assistance</div>
           </div>
         </div>
         <ChatWindow
