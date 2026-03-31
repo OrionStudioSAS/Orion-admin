@@ -90,7 +90,7 @@ export default async function ProjectPage() {
         <div className="space-y-4">
 
           {/* Liens rapides */}
-          {(project.figma_url || project.site_url) && (
+          {(project.figma_url || project.site_url || project.monday_url) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {project.figma_url && (
                 <a
@@ -127,6 +127,30 @@ export default async function ProjectPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-xs text-[#a1a1aa] uppercase tracking-widest mb-1">Site web</div>
                     <div className="text-sm font-medium text-white truncate">{project.site_url.replace(/^https?:\/\//, '')}</div>
+                  </div>
+                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
+                </a>
+              )}
+              {project.monday_url && (
+                <a
+                  href={project.monday_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5 hover:border-white/20 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                      <circle cx="6" cy="17" r="3.5" fill="#FF3D57" />
+                      <circle cx="12" cy="17" r="3.5" fill="#FFCB00" />
+                      <circle cx="18" cy="17" r="3.5" fill="#00CA72" />
+                      <path d="M3 17c0-3.5 2-8 3-10l3 7" stroke="none" />
+                      <path d="M5.5 7C6.5 9 9 14 9 17" stroke="#FF3D57" strokeWidth="2.5" strokeLinecap="round" />
+                      <path d="M11.5 7C12.5 9 15 14 15 17" stroke="#FFCB00" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-[#a1a1aa] uppercase tracking-widest mb-1">Suivi de projet</div>
+                    <div className="text-sm font-medium text-white">Voir sur Monday</div>
                   </div>
                   <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
                 </a>

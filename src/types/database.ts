@@ -107,6 +107,7 @@ export interface Database {
           status: 'en_cours' | 'termine' | 'en_pause'
           figma_url: string | null
           site_url: string | null
+          monday_url: string | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -118,6 +119,7 @@ export interface Database {
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
           site_url?: string | null
+          monday_url?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -127,6 +129,7 @@ export interface Database {
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
           site_url?: string | null
+          monday_url?: string | null
           notes?: string | null
           updated_at?: string
         }

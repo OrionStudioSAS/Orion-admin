@@ -58,6 +58,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     status: project?.status || 'en_cours',
     figma_url: project?.figma_url || '',
     site_url: project?.site_url || '',
+    monday_url: project?.monday_url || '',
     notes: project?.notes || '',
   })
 
@@ -90,6 +91,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
         status: form.status as Project['status'],
         figma_url: form.figma_url || null,
         site_url: form.site_url || null,
+        monday_url: form.monday_url || null,
         notes: form.notes || null,
       })
       setSaved(true)
@@ -186,6 +188,10 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
           <div>
             <label className={labelClass}>URL du site</label>
             <input type="url" value={form.site_url} onChange={handleChange('site_url')} placeholder="https://monsite.fr" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Suivi de projet (Monday)</label>
+            <input type="url" value={form.monday_url} onChange={handleChange('monday_url')} placeholder="https://monday.com/boards/..." className={inputClass} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Note pour le client</label>
