@@ -44,11 +44,13 @@ export default async function ProjectPage() {
 
   if (profile?.role === 'admin') redirect('/admin/users')
 
-  const { data: project } = await admin
+  const { data: projectsData } = await admin
     .from('projects')
     .select('*, project_files(*)')
     .eq('profile_id', user.id)
-    .single()
+    .order('updated_at', { ascending: false })
+
+  const project = projectsData?.[0] ?? null
 
   const steps = project
     ? (await admin.from('project_steps').select('*').eq('project_id', project.id).order('position', { ascending: true })).data || []

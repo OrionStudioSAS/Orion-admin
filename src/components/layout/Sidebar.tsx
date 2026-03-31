@@ -35,6 +35,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
     { href: isAdmin ? '/admin/chat' : '/chat', icon: MessageIcon, label: 'Messages', badge: unreadMessagesCount, section: null },
     ...(isAdmin ? [
       { href: '/admin', icon: UsersIcon, label: 'Utilisateurs', badge: pendingRequestsCount, section: 'Admin' },
+      { href: '/admin/projects', icon: FolderIcon, label: 'Projets', section: null },
       { href: '/admin/clients', icon: BuildingIcon, label: 'Clients', section: null },
       { href: '/admin/prospection', icon: TargetIcon, label: 'Prospection', section: null },
     ] : []),
@@ -75,7 +76,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           const active = pathname === href || (
             href === '/admin'
               ? pathname.startsWith('/admin/users')
-              : pathname.startsWith(href + '/')
+              : href !== '/admin' && pathname.startsWith(href + '/')
           )
           const hasBadge = badge && badge > 0
           const showSectionLabel = section && (idx === 0 || navItems[idx - 1].section !== section)

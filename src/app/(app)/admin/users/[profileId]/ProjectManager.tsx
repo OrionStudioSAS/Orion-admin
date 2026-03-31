@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { upsertProject, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink, getDownloadUrl } from '@/app/actions/projects'
+import { updateProjectById, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink, getDownloadUrl } from '@/app/actions/projects'
 import { Project, ProjectFile } from '@/types/database'
 import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon, LinkIcon } from '@/components/ui/Icons'
 
@@ -43,23 +43,25 @@ const PRESET_MESSAGES = [
 ]
 
 interface Props {
+  projectId: string
   profileId: string
-  project: Project | null
+  project: Project
   files: ProjectFile[]
   whatsappConfigured: boolean
   hasPhone: boolean
 }
 
-export default function ProjectManager({ profileId, project, files, whatsappConfigured, hasPhone }: Props) {
+export default function ProjectManager({ projectId, profileId, project, files, whatsappConfigured, hasPhone }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({
-    plan_type: project?.plan_type || '',
-    status: project?.status || 'en_cours',
-    figma_url: project?.figma_url || '',
-    site_url: project?.site_url || '',
-    deadline: project?.deadline || '',
-    notes: project?.notes || '',
+    name: project.name || '',
+    plan_type: project.plan_type || '',
+    status: project.status || 'en_cours',
+    figma_url: project.figma_url || '',
+    site_url: project.site_url || '',
+    deadline: project.deadline || '',
+    notes: project.notes || '',
   })
 
   // Download state
@@ -96,7 +98,8 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
     startTransition(async () => {
-      await upsertProject(profileId, {
+      await updateProjectById(projectId, profileId, {
+        name: form.name.trim() || null,
         plan_type: (form.plan_type || null) as Project['plan_type'],
         status: form.status as Project['status'],
         figma_url: form.figma_url || null,
@@ -138,6 +141,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     try {
       const fd = new FormData()
       fd.append('file', pendingFile)
+      fd.append('projectId', projectId)
       fd.append('profileId', profileId)
       fd.append('category', uploadingCategory)
       fd.append('name', uploadName.trim())
@@ -156,7 +160,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
 
   function handleToggleVisibility(fileId: string, current: boolean) {
     startTransition(async () => {
-      await toggleFileVisibility(fileId, !current, profileId)
+      await toggleFileVisibility(fileId, !current, profileId, projectId)
     })
   }
 
@@ -165,7 +169,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
     setLinkLoading(true)
     setLinkError('')
     try {
-      await addProjectLink(profileId, {
+      await addProjectLink(projectId, profileId, {
         category: category as 'resource' | 'invoice' | 'quote',
         name: linkForm.name.trim(),
         url: linkForm.url.trim(),
@@ -199,7 +203,7 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
   function handleDelete(fileId: string, storagePath: string | null) {
     if (!confirm('Supprimer ce fichier définitivement ?')) return
     startTransition(async () => {
-      await deleteProjectFile(fileId, storagePath)
+      await deleteProjectFile(fileId, storagePath, projectId, profileId)
     })
   }
 
@@ -210,6 +214,10 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
         <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-5">Paramètres du projet</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Nom du projet</label>
+            <input type="text" value={form.name} onChange={handleChange('name')} placeholder="Ex : Refonte site Acme, Boutique Shopify..." className={inputClass} />
+          </div>
           <div>
             <label className={labelClass}>Offre / Plan</label>
             <select value={form.plan_type} onChange={handleChange('plan_type')} className={inputClass}>
@@ -346,7 +354,6 @@ export default function ProjectManager({ profileId, project, files, whatsappConf
       {CATEGORIES.map(({ key, label, desc }) => {
         const catFiles = files.filter(f => f.category === key)
         const isUploading = uploadingCategory === key
-
         const isAddingLink = linkCategory === key
 
         return (

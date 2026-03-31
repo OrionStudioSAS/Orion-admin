@@ -103,6 +103,7 @@ export interface Database {
         Row: {
           id: string
           profile_id: string
+          name: string | null
           plan_type: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
           status: 'en_cours' | 'termine' | 'en_pause'
           figma_url: string | null
@@ -116,6 +117,7 @@ export interface Database {
         Insert: {
           id?: string
           profile_id: string
+          name?: string | null
           plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
@@ -127,6 +129,7 @@ export interface Database {
           updated_at?: string
         }
         Update: {
+          name?: string | null
           plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null

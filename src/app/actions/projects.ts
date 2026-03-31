@@ -16,6 +16,49 @@ async function requireAdmin() {
   return { user, admin }
 }
 
+function revalidateProjectPaths(projectId: string, profileId: string) {
+  revalidatePath('/admin/projects')
+  revalidatePath(`/admin/projects/${projectId}`)
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+}
+
+// Create a new project for a profile
+export async function createProject(profileId: string, name: string): Promise<string> {
+  const { admin } = await requireAdmin()
+  const { data, error } = await admin.from('projects').insert({
+    profile_id: profileId,
+    name: name.trim() || null,
+    status: 'en_cours',
+  }).select('id').single()
+  if (error || !data) throw new Error(error?.message || 'Impossible de créer le projet')
+  revalidatePath('/admin/projects')
+  revalidatePath(`/admin/users/${profileId}`)
+  return data.id
+}
+
+// Update an existing project by ID
+export async function updateProjectById(projectId: string, profileId: string, data: Partial<Project>) {
+  const { admin } = await requireAdmin()
+
+  const { data: existing } = await admin.from('projects').select('status').eq('id', projectId).single()
+  const prevStatus = existing?.status ?? null
+
+  await admin.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', projectId)
+
+  if (data.status && data.status !== prevStatus) {
+    const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
+    if (profile?.phone) {
+      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+      const msg = notifStatusChange(firstName, data.status)
+      sendWhatsAppMessage(profile.phone, msg).catch(() => {})
+    }
+  }
+
+  revalidateProjectPaths(projectId, profileId)
+}
+
+// Legacy upsert (kept for compatibility)
 export async function upsertProject(profileId: string, data: Partial<Project>) {
   const { admin } = await requireAdmin()
 
@@ -28,7 +71,6 @@ export async function upsertProject(profileId: string, data: Partial<Project>) {
     await admin.from('projects').insert({ profile_id: profileId, ...data })
   }
 
-  // Send WhatsApp notification if status changed
   if (data.status && data.status !== prevStatus) {
     const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
     if (profile?.phone) {
@@ -38,11 +80,12 @@ export async function upsertProject(profileId: string, data: Partial<Project>) {
     }
   }
 
+  revalidatePath('/admin/projects')
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }
 
-export async function deleteProjectFile(fileId: string, storagePath: string | null) {
+export async function deleteProjectFile(fileId: string, storagePath: string | null, projectId?: string, profileId?: string) {
   const { admin } = await requireAdmin()
 
   if (storagePath) {
@@ -50,6 +93,9 @@ export async function deleteProjectFile(fileId: string, storagePath: string | nu
   }
   await admin.from('project_files').delete().eq('id', fileId)
 
+  revalidatePath('/admin/projects')
+  if (projectId) revalidatePath(`/admin/projects/${projectId}`)
+  if (profileId) revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }
 
@@ -71,23 +117,13 @@ export async function uploadProjectFile(formData: FormData) {
   const { admin } = await requireAdmin()
 
   const file = formData.get('file') as File
+  const projectId = formData.get('projectId') as string
   const profileId = formData.get('profileId') as string
   const category = formData.get('category') as string
   const name = formData.get('name') as string
   const visibleToClient = formData.get('visibleToClient') !== 'false'
 
-  if (!file || !profileId || !category || !name) throw new Error('Données manquantes')
-
-  // Get or create project
-  let projectId: string
-  const { data: existing } = await admin.from('projects').select('id').eq('profile_id', profileId).single()
-  if (existing) {
-    projectId = existing.id
-  } else {
-    const { data: created } = await admin.from('projects').insert({ profile_id: profileId }).select('id').single()
-    if (!created) throw new Error('Impossible de créer le projet')
-    projectId = created.id
-  }
+  if (!file || !projectId || !profileId || !category || !name) throw new Error('Données manquantes')
 
   // Upload to Supabase Storage
   const bytes = await file.arrayBuffer()
@@ -120,27 +156,16 @@ export async function uploadProjectFile(formData: FormData) {
     sendWhatsAppMessage(profile.phone, msg).catch(() => {})
   }
 
-  revalidatePath(`/admin/users/${profileId}`)
-  revalidatePath('/project')
+  revalidateProjectPaths(projectId, profileId)
 }
 
-export async function addProjectLink(profileId: string, data: {
+export async function addProjectLink(projectId: string, profileId: string, data: {
   category: 'resource' | 'invoice' | 'quote'
   name: string
   url: string
   visibleToClient: boolean
 }) {
   const { admin } = await requireAdmin()
-
-  let projectId: string
-  const { data: existing } = await admin.from('projects').select('id').eq('profile_id', profileId).single()
-  if (existing) {
-    projectId = existing.id
-  } else {
-    const { data: created } = await admin.from('projects').insert({ profile_id: profileId }).select('id').single()
-    if (!created) throw new Error('Impossible de créer le projet')
-    projectId = created.id
-  }
 
   const { error } = await admin.from('project_files').insert({
     project_id: projectId,
@@ -152,13 +177,14 @@ export async function addProjectLink(profileId: string, data: {
   })
   if (error) throw new Error(error.message)
 
-  revalidatePath(`/admin/users/${profileId}`)
-  revalidatePath('/project')
+  revalidateProjectPaths(projectId, profileId)
 }
 
-export async function toggleFileVisibility(fileId: string, visible: boolean, profileId: string) {
+export async function toggleFileVisibility(fileId: string, visible: boolean, profileId: string, projectId?: string) {
   const { admin } = await requireAdmin()
   await admin.from('project_files').update({ visible_to_client: visible }).eq('id', fileId)
+  revalidatePath('/admin/projects')
+  if (projectId) revalidatePath(`/admin/projects/${projectId}`)
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }
@@ -183,22 +209,25 @@ export async function createStep(projectId: string, profileId: string, data: { t
     position: nextPos,
   })
   if (error) throw new Error(error.message)
-  revalidatePath(`/admin/users/${profileId}`)
-  revalidatePath('/project')
+  revalidateProjectPaths(projectId, profileId)
 }
 
-export async function updateStep(stepId: string, profileId: string, data: { title?: string; description?: string | null; status?: 'todo' | 'in_progress' | 'done'; start_date?: string | null; end_date?: string | null }) {
+export async function updateStep(stepId: string, profileId: string, data: { title?: string; description?: string | null; status?: 'todo' | 'in_progress' | 'done'; start_date?: string | null; end_date?: string | null }, projectId?: string) {
   const { admin } = await requireAdmin()
   const { error } = await admin.from('project_steps').update(data).eq('id', stepId)
   if (error) throw new Error(error.message)
+  revalidatePath('/admin/projects')
+  if (projectId) revalidatePath(`/admin/projects/${projectId}`)
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }
 
-export async function deleteStep(stepId: string, profileId: string) {
+export async function deleteStep(stepId: string, profileId: string, projectId?: string) {
   const { admin } = await requireAdmin()
   const { error } = await admin.from('project_steps').delete().eq('id', stepId)
   if (error) throw new Error(error.message)
+  revalidatePath('/admin/projects')
+  if (projectId) revalidatePath(`/admin/projects/${projectId}`)
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }
@@ -208,8 +237,7 @@ export async function reorderSteps(projectId: string, profileId: string, ordered
   await Promise.all(orderedIds.map((id, idx) =>
     admin.from('project_steps').update({ position: idx }).eq('id', id).eq('project_id', projectId)
   ))
-  revalidatePath(`/admin/users/${profileId}`)
-  revalidatePath('/project')
+  revalidateProjectPaths(projectId, profileId)
 }
 
 export async function sendStepMessage(formData: FormData): Promise<void> {
@@ -264,6 +292,8 @@ export async function sendStepMessage(formData: FormData): Promise<void> {
     is_read: false,
   })
 
+  revalidatePath('/admin/projects')
+  revalidatePath(`/admin/projects/${projectId}`)
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
 }
