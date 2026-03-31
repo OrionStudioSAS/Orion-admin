@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Project } from '@/types/database'
+import { sendWhatsAppMessage, notifNewFile, notifStatusChange } from '@/lib/whatsapp'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -18,12 +19,23 @@ async function requireAdmin() {
 export async function upsertProject(profileId: string, data: Partial<Project>) {
   const { admin } = await requireAdmin()
 
-  const { data: existing } = await admin.from('projects').select('id').eq('profile_id', profileId).single()
+  const { data: existing } = await admin.from('projects').select('id, status').eq('profile_id', profileId).single()
+  const prevStatus = existing?.status ?? null
 
   if (existing) {
     await admin.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', existing.id)
   } else {
     await admin.from('projects').insert({ profile_id: profileId, ...data })
+  }
+
+  // Send WhatsApp notification if status changed
+  if (data.status && data.status !== prevStatus) {
+    const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
+    if (profile?.phone) {
+      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+      const msg = notifStatusChange(firstName, data.status)
+      sendWhatsAppMessage(profile.phone, msg).catch(() => {})
+    }
   }
 
   revalidatePath(`/admin/users/${profileId}`)
@@ -98,6 +110,22 @@ export async function uploadProjectFile(formData: FormData) {
 
   if (dbError) throw new Error(dbError.message)
 
+  // Send WhatsApp notification for new file
+  const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
+  if (profile?.phone) {
+    const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+    const msg = notifNewFile(firstName, name, category)
+    sendWhatsAppMessage(profile.phone, msg).catch(() => {})
+  }
+
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
+}
+
+export async function sendProjectNotification(profileId: string, message: string) {
+  await requireAdmin()
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('phone').eq('id', profileId).single()
+  if (!profile?.phone) throw new Error('Aucun numéro de téléphone configuré pour cet utilisateur')
+  await sendWhatsAppMessage(profile.phone, message)
 }

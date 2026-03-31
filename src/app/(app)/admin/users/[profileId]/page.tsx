@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon } from '@/components/ui/Icons'
 import ProjectManager from './ProjectManager'
 import { Project, ProjectFile } from '@/types/database'
+import { isWhatsAppConfigured } from '@/lib/whatsapp'
 
 interface Props {
   params: Promise<{ profileId: string }>
@@ -31,6 +32,9 @@ export default async function AdminUserProjectPage({ params }: Props) {
     const { data } = await admin.from('project_files').select('*').eq('project_id', project.id).order('created_at', { ascending: false })
     files = data || []
   }
+
+  const whatsappConfigured = isWhatsAppConfigured()
+  const hasPhone = !!targetProfile.phone
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -72,6 +76,8 @@ export default async function AdminUserProjectPage({ params }: Props) {
         profileId={profileId}
         project={project as Project | null}
         files={files}
+        whatsappConfigured={whatsappConfigured}
+        hasPhone={hasPhone}
       />
     </div>
   )
