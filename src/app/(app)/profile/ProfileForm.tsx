@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { updateProfile, changePassword } from '@/app/actions/profile'
+import { useState, useTransition, useRef } from 'react'
+import { updateProfile, changePassword, uploadAvatar } from '@/app/actions/profile'
 import { Profile } from '@/types/database'
 import { CheckIcon, ShieldIcon } from '@/components/ui/Icons'
 
@@ -16,6 +16,11 @@ export default function ProfileForm({ profile }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+
+  // Avatar
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '')
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const avatarRef = useRef<HTMLInputElement>(null)
 
   // Password change
   const [pwdForm, setPwdForm] = useState({ newPwd: '', confirmPwd: '' })
@@ -44,11 +49,27 @@ export default function ProfileForm({ profile }: Props) {
   }
   const [form, setForm] = useState({
     full_name: profile.full_name || '',
+    job_title: profile.job_title || '',
     company: profile.company || '',
     website: profile.website || '',
     webflow_site: profile.webflow_site || '',
     phone: profile.phone || '',
   })
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const url = await uploadAvatar(fd)
+      setAvatarUrl(url)
+    } catch {
+      // silently fail
+    }
+    setAvatarLoading(false)
+  }
 
   function handleChange(key: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,7 +83,7 @@ export default function ProfileForm({ profile }: Props) {
     setError('')
     startTransition(async () => {
       try {
-        await updateProfile(form)
+        await updateProfile({ ...form, avatar_url: avatarUrl || null })
         setSaved(true)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -75,6 +96,42 @@ export default function ProfileForm({ profile }: Props) {
       {/* Identité */}
       <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4 md:p-6">
         <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-5">Identité</h2>
+
+        {/* Avatar */}
+        <div className="flex items-center gap-4 mb-5">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl font-semibold text-white uppercase">
+                  {(profile.full_name || profile.email)[0]}
+                </span>
+              )}
+            </div>
+            {avatarLoading && (
+              <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-xs text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-2 rounded-lg cursor-pointer transition-all">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round"/><polyline points="17 8 12 3 7 8" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="3" x2="12" y2="15" strokeLinecap="round"/></svg>
+              Changer la photo
+              <input
+                ref={avatarRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+            </label>
+            <p className="text-[10px] text-[#52525b] mt-1">JPG, PNG, WebP — max 5 MB</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Nom complet</label>
@@ -83,6 +140,16 @@ export default function ProfileForm({ profile }: Props) {
               value={form.full_name}
               onChange={handleChange('full_name')}
               placeholder="Jean Dupont"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Métier / Rôle</label>
+            <input
+              type="text"
+              value={form.job_title}
+              onChange={handleChange('job_title')}
+              placeholder="Directeur Marketing, CEO..."
               className={inputClass}
             />
           </div>
@@ -96,7 +163,7 @@ export default function ProfileForm({ profile }: Props) {
               className={inputClass}
             />
           </div>
-          <div className="sm:col-span-2">
+          <div>
             <label className={labelClass}>Email</label>
             <input
               type="email"

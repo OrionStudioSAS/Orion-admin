@@ -29,7 +29,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
   const isAdmin = profile.role === 'admin'
 
   const navItems = [
-    { href: '/dashboard', icon: GridIcon, label: 'Flows', section: null },
+    { href: '/dashboard', icon: GridIcon, label: 'Automatisations', section: null },
     ...(!isAdmin ? [{ href: '/project', icon: FolderIcon, label: 'Mon projet', section: null }] : []),
     { href: '/history', icon: HistoryIcon, label: 'Historique', section: null },
     { href: isAdmin ? '/admin/chat' : '/chat', icon: MessageIcon, label: 'Messages', badge: unreadMessagesCount, section: null },

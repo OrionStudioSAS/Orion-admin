@@ -197,7 +197,7 @@ export async function sendProjectNotification(profileId: string, message: string
   await sendWhatsAppMessage(profile.phone, message)
 }
 
-export async function createStep(projectId: string, profileId: string, data: { title: string; description?: string }) {
+export async function createStep(projectId: string, profileId: string, data: { title: string; description?: string; start_date?: string; end_date?: string }) {
   const { admin } = await requireAdmin()
   const { data: existing } = await admin.from('project_steps').select('position').eq('project_id', projectId).order('position', { ascending: false }).limit(1).single()
   const nextPos = (existing?.position ?? -1) + 1
@@ -207,6 +207,8 @@ export async function createStep(projectId: string, profileId: string, data: { t
     description: data.description || null,
     status: 'todo',
     position: nextPos,
+    start_date: data.start_date || null,
+    end_date: data.end_date || null,
   })
   if (error) throw new Error(error.message)
   revalidateProjectPaths(projectId, profileId)
@@ -310,6 +312,85 @@ export async function markStepMessagesRead(stepId: string, projectId: string, is
     .eq('project_id', projectId)
     .eq('is_admin_sender', !isAdmin)
     .eq('is_read', false)
+}
+
+export async function approveStep(stepId: string, projectId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non autorisé')
+  const admin = createAdminClient()
+  // Verify the project belongs to this user
+  const { data: project } = await admin.from('projects').select('profile_id').eq('id', projectId).single()
+  if (project?.profile_id !== user.id) throw new Error('Accès refusé')
+  await admin.from('project_steps').update({ client_approved: true }).eq('id', stepId)
+  revalidatePath('/project')
+  revalidatePath('/admin/projects')
+  revalidatePath(`/admin/projects/${projectId}`)
+}
+
+export async function addTeamMember(projectId: string, profileId: string, memberId: string, roleOverride?: string) {
+  const { admin } = await requireAdmin()
+  const { error } = await admin.from('project_team_members').upsert({
+    project_id: projectId,
+    profile_id: memberId,
+    role_override: roleOverride || null,
+  }, { onConflict: 'project_id,profile_id' })
+  if (error) throw new Error(error.message)
+  revalidateProjectPaths(projectId, profileId)
+}
+
+export async function removeTeamMember(projectId: string, profileId: string, memberId: string) {
+  const { admin } = await requireAdmin()
+  await admin.from('project_team_members').delete().eq('project_id', projectId).eq('profile_id', memberId)
+  revalidateProjectPaths(projectId, profileId)
+}
+
+export async function addProjectApp(projectId: string, profileId: string, appId: string) {
+  const { admin } = await requireAdmin()
+  const { error } = await admin.from('project_apps').upsert({
+    project_id: projectId,
+    app_id: appId,
+  }, { onConflict: 'project_id,app_id' })
+  if (error) throw new Error(error.message)
+  revalidateProjectPaths(projectId, profileId)
+}
+
+export async function removeProjectApp(projectId: string, profileId: string, appId: string) {
+  const { admin } = await requireAdmin()
+  await admin.from('project_apps').delete().eq('project_id', projectId).eq('app_id', appId)
+  revalidateProjectPaths(projectId, profileId)
+}
+
+export async function createApp(name: string, description?: string): Promise<string> {
+  const { admin } = await requireAdmin()
+  const { data, error } = await admin.from('apps').insert({ name, description: description || null }).select('id').single()
+  if (error || !data) throw new Error(error?.message || 'Erreur')
+  revalidatePath('/admin/projects')
+  return data.id
+}
+
+export async function deleteApp(appId: string) {
+  const { admin } = await requireAdmin()
+  // Also delete logo from storage if needed
+  await admin.from('apps').delete().eq('id', appId)
+  revalidatePath('/admin/projects')
+}
+
+export async function uploadAppLogo(formData: FormData): Promise<string> {
+  const { admin } = await requireAdmin()
+  const file = formData.get('file') as File
+  const appId = formData.get('appId') as string
+  if (!file || !appId) throw new Error('Données manquantes')
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `app-logos/${appId}.${ext}`
+  const bytes = await file.arrayBuffer()
+  const { error } = await admin.storage.from('project-files').upload(path, bytes, { contentType: file.type, upsert: true })
+  if (error) throw new Error(error.message)
+  const { data: urlData } = admin.storage.from('project-files').getPublicUrl(path)
+  const url = `${urlData.publicUrl}?t=${Date.now()}`
+  await admin.from('apps').update({ logo_url: url }).eq('id', appId)
+  revalidatePath('/admin/projects')
+  return url
 }
 
 export async function getStepAttachmentUrl(attachmentPath: string): Promise<string> {

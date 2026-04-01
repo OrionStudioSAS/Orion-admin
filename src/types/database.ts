@@ -13,6 +13,8 @@ export interface Database {
           website: string | null
           webflow_site: string | null
           phone: string | null
+          avatar_url: string | null
+          job_title: string | null
           created_at: string
           updated_at: string
         }
@@ -25,6 +27,8 @@ export interface Database {
           website?: string | null
           webflow_site?: string | null
           phone?: string | null
+          avatar_url?: string | null
+          job_title?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -37,6 +41,8 @@ export interface Database {
           website?: string | null
           webflow_site?: string | null
           phone?: string | null
+          avatar_url?: string | null
+          job_title?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -108,6 +114,8 @@ export interface Database {
           status: 'en_cours' | 'termine' | 'en_pause'
           figma_url: string | null
           site_url: string | null
+          staging_url: string | null
+          google_business_url: string | null
           monday_url: string | null
           deadline: string | null
           notes: string | null
@@ -122,6 +130,8 @@ export interface Database {
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
           site_url?: string | null
+          staging_url?: string | null
+          google_business_url?: string | null
           monday_url?: string | null
           deadline?: string | null
           notes?: string | null
@@ -134,6 +144,8 @@ export interface Database {
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
           site_url?: string | null
+          staging_url?: string | null
+          google_business_url?: string | null
           monday_url?: string | null
           deadline?: string | null
           notes?: string | null
@@ -209,6 +221,7 @@ export interface Database {
           position: number
           start_date: string | null
           end_date: string | null
+          client_approved: boolean
           created_at: string
         }
         Insert: {
@@ -220,6 +233,7 @@ export interface Database {
           position?: number
           start_date?: string | null
           end_date?: string | null
+          client_approved?: boolean
           created_at?: string
         }
         Update: {
@@ -229,6 +243,7 @@ export interface Database {
           position?: number
           start_date?: string | null
           end_date?: string | null
+          client_approved?: boolean
         }
         Relationships: []
       }
@@ -347,6 +362,67 @@ export interface Database {
         }
         Relationships: []
       }
+      apps: {
+        Row: {
+          id: string
+          name: string
+          logo_url: string | null
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          logo_url?: string | null
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          logo_url?: string | null
+          description?: string | null
+        }
+        Relationships: []
+      }
+      project_apps: {
+        Row: {
+          id: string
+          project_id: string
+          app_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          app_id: string
+          created_at?: string
+        }
+        Update: {
+          project_id?: string
+          app_id?: string
+        }
+        Relationships: []
+      }
+      project_team_members: {
+        Row: {
+          id: string
+          project_id: string
+          profile_id: string
+          role_override: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          profile_id: string
+          role_override?: string | null
+          created_at?: string
+        }
+        Update: {
+          role_override?: string | null
+        }
+        Relationships: []
+      }
       access_requests: {
         Row: {
           id: string
@@ -426,3 +502,6 @@ export type Prospect = Database['public']['Tables']['prospects']['Row']
 export type ClientDocument = Database['public']['Tables']['client_documents']['Row']
 export type ProjectStep = Database['public']['Tables']['project_steps']['Row']
 export type StepMessage = Database['public']['Tables']['step_messages']['Row']
+export type App = Database['public']['Tables']['apps']['Row']
+export type ProjectApp = Database['public']['Tables']['project_apps']['Row']
+export type ProjectTeamMember = Database['public']['Tables']['project_team_members']['Row']

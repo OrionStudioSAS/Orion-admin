@@ -22,7 +22,7 @@ export default async function AdminFlowsPage() {
           <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
           <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Administration</span>
         </div>
-        <h1 className="text-2xl md:text-3xl font-semibold text-white">Flows N8N</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-white">Automatisations N8N</h1>
         <p className="text-[#a1a1aa] text-sm mt-2">Gérez vos workflows et leurs webhooks</p>
       </div>
       <FlowsManager flows={flows || []} />

@@ -60,6 +60,8 @@ export default function ProjectManager({ projectId, profileId, project, files, w
     status: project.status || 'en_cours',
     figma_url: project.figma_url || '',
     site_url: project.site_url || '',
+    staging_url: project.staging_url || '',
+    google_business_url: project.google_business_url || '',
     deadline: project.deadline || '',
     notes: project.notes || '',
   })
@@ -104,6 +106,8 @@ export default function ProjectManager({ projectId, profileId, project, files, w
         status: form.status as Project['status'],
         figma_url: form.figma_url || null,
         site_url: form.site_url || null,
+        staging_url: form.staging_url || null,
+        google_business_url: form.google_business_url || null,
         deadline: form.deadline || null,
         notes: form.notes || null,
       })
@@ -247,6 +251,14 @@ export default function ProjectManager({ projectId, profileId, project, files, w
           <div>
             <label className={labelClass}>URL du site</label>
             <input type="url" value={form.site_url} onChange={handleChange('site_url')} placeholder="https://monsite.fr" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>URL Staging / Dev</label>
+            <input type="url" value={form.staging_url} onChange={handleChange('staging_url')} placeholder="https://staging.monsite.fr" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Fiche Google Business</label>
+            <input type="url" value={form.google_business_url} onChange={handleChange('google_business_url')} placeholder="https://g.page/..." className={inputClass} />
           </div>
           <div>
             <label className={labelClass}>Date de livraison</label>

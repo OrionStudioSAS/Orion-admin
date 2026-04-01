@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import StepChatPanel from '@/components/chat/StepChatPanel'
+import { approveStep } from '@/app/actions/projects'
 import { StepMessage } from '@/types/database'
 
 interface Step {
@@ -11,6 +12,7 @@ interface Step {
   status: string
   start_date: string | null
   end_date: string | null
+  client_approved: boolean
 }
 
 interface Props {
@@ -31,6 +33,15 @@ function formatDate(d: string | null) {
 
 export default function ClientStepRow({ idx, step, isDone, isInProgress, msgs, unread, profileId, projectId }: Props) {
   const [chatOpen, setChatOpen] = useState(false)
+  const [approving, startApproveTransition] = useTransition()
+  const [approved, setApproved] = useState(step.client_approved)
+
+  function handleApprove() {
+    startApproveTransition(async () => {
+      await approveStep(step.id, projectId)
+      setApproved(true)
+    })
+  }
 
   return (
     <div>
@@ -89,6 +100,26 @@ export default function ClientStepRow({ idx, step, isDone, isInProgress, msgs, u
         {isDone && (
           <span className="text-[9px] font-semibold text-green-400 border border-green-500/30 bg-green-500/10 rounded-full px-2 py-0.5 shrink-0 mt-0.5">
             Terminé
+          </span>
+        )}
+
+        {/* Approve button */}
+        {isDone && !approved && (
+          <button
+            type="button"
+            onClick={handleApprove}
+            disabled={approving}
+            className="flex items-center gap-1 text-[9px] font-semibold text-white bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-full px-2.5 py-1 shrink-0 mt-0.5 transition-all cursor-pointer disabled:opacity-50"
+            title="Valider cette étape"
+          >
+            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            {approving ? '...' : 'Valider'}
+          </button>
+        )}
+        {approved && (
+          <span className="text-[9px] font-semibold text-green-400 border border-green-500/30 bg-green-500/10 rounded-full px-2 py-0.5 shrink-0 mt-0.5 flex items-center gap-1">
+            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Validé
           </span>
         )}
 

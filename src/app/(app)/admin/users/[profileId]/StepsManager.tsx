@@ -56,6 +56,8 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
   const [adding, setAdding] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [newStartDate, setNewStartDate] = useState('')
+  const [newEndDate, setNewEndDate] = useState('')
   const [addError, setAddError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<{ title: string; description: string; start_date: string; end_date: string }>({ title: '', description: '', start_date: '', end_date: '' })
@@ -75,9 +77,16 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
     setAddError('')
     startTransition(async () => {
       try {
-        await createStep(projectId, profileId, { title: newTitle.trim(), description: newDesc.trim() || undefined })
+        await createStep(projectId, profileId, {
+          title: newTitle.trim(),
+          description: newDesc.trim() || undefined,
+          start_date: newStartDate || undefined,
+          end_date: newEndDate || undefined,
+        })
         setNewTitle('')
         setNewDesc('')
+        setNewStartDate('')
+        setNewEndDate('')
         setAdding(false)
       } catch (err) {
         setAddError(err instanceof Error ? err.message : 'Erreur')
@@ -164,7 +173,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
         </div>
         <button
           type="button"
-          onClick={() => { setAdding(a => !a); setNewTitle(''); setNewDesc('') }}
+          onClick={() => { setAdding(a => !a); setNewTitle(''); setNewDesc(''); setNewStartDate(''); setNewEndDate('') }}
           className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer
             ${adding ? 'bg-white text-black border-white' : 'text-[#a1a1aa] border-[#1e1e1e] hover:text-white hover:border-white/20'}`}
         >
@@ -209,6 +218,26 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
               placeholder="Description (optionnel)"
               className={inputClass}
             />
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-[#a1a1aa] uppercase tracking-widest whitespace-nowrap">Début</label>
+                <input
+                  type="date"
+                  value={newStartDate}
+                  onChange={e => setNewStartDate(e.target.value)}
+                  className={dateClass}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-[#a1a1aa] uppercase tracking-widest whitespace-nowrap">Fin</label>
+                <input
+                  type="date"
+                  value={newEndDate}
+                  onChange={e => setNewEndDate(e.target.value)}
+                  className={dateClass}
+                />
+              </div>
+            </div>
             {addError && <p className="text-xs text-red-400">{addError}</p>}
             <div className="flex items-center gap-2">
               <button
@@ -348,6 +377,13 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                           </div>
                         )}
                       </div>
+                      {/* Client approved badge */}
+                      {step.client_approved && (
+                        <span className="text-[9px] font-semibold text-green-400 border border-green-500/20 bg-green-500/5 rounded-full px-2 py-0.5 shrink-0 flex items-center gap-1">
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          Client ✓
+                        </span>
+                      )}
                       {/* Chat toggle */}
                       <button
                         type="button"

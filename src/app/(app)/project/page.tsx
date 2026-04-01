@@ -65,6 +65,17 @@ export default async function ProjectPage() {
     }
   }
 
+  // Team members and apps
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamMembers: any[] = project
+    ? (await admin.from('project_team_members').select('*, profile:profiles(*)').eq('project_id', project.id)).data || []
+    : []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const projectApps: any[] = project
+    ? (await admin.from('project_apps').select('*, app:apps(*)').eq('project_id', project.id)).data || []
+    : []
+
   const files = ((project?.project_files || []) as Array<{
     id: string; name: string; category: string; type: string; storage_path: string | null; url: string | null; original_name: string | null; size_bytes: number | null; visible_to_client: boolean; created_at: string
   }>).filter(f => f.visible_to_client !== false)
@@ -104,6 +115,28 @@ export default async function ProjectPage() {
         </div>
       </div>
 
+      {/* Review banner when project is done */}
+      {project?.status === 'termine' && (
+        <div className="mb-6 flex items-start gap-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 rounded-2xl p-5">
+          <div className="text-2xl shrink-0">⭐</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-yellow-200 mb-1">Votre projet est terminé — laissez-nous un avis !</div>
+            <p className="text-xs text-yellow-400/70 leading-relaxed mb-3">
+              Votre retour nous aide à nous améliorer et à aider d&apos;autres entreprises à nous trouver. Cela prend moins de 30 secondes !
+            </p>
+            <a
+              href={process.env.NEXT_PUBLIC_REVIEW_URL || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-semibold px-4 py-2 rounded-lg transition-all"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Laisser un avis Google
+            </a>
+          </div>
+        </div>
+      )}
+
       {!project ? (
         <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
           <FolderIcon className="w-8 h-8 text-[#52525b] mx-auto mb-3" />
@@ -114,7 +147,7 @@ export default async function ProjectPage() {
         <div className="space-y-4">
 
           {/* Liens rapides */}
-          {(project.figma_url || project.site_url) && (
+          {(project.figma_url || project.site_url || project.staging_url) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {project.figma_url && (
                 <a
@@ -155,7 +188,70 @@ export default async function ProjectPage() {
                   <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
                 </a>
               )}
+              {project.staging_url && (
+                <a
+                  href={project.staging_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5 hover:border-white/20 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0 group-hover:bg-orange-500/20 transition-colors">
+                    <svg className="w-5 h-5 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M10 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6" strokeLinecap="round"/>
+                      <path d="M8 12h.01M12 12h.01" strokeLinecap="round" strokeWidth="2"/>
+                      <path d="M16 18l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-orange-400/80 uppercase tracking-widest mb-1">Staging / Prévisualisation</div>
+                    <div className="text-sm font-medium text-white truncate">{project.staging_url.replace(/^https?:\/\//, '')}</div>
+                  </div>
+                  <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
+                </a>
+              )}
             </div>
+          )}
+
+          {/* Google Business warning if missing */}
+          {!project.google_business_url && project.status !== 'termine' && (
+            <div className="flex items-start gap-3 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-4">
+              <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinejoin="round"/>
+                  <line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round" strokeWidth="2"/>
+                </svg>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-yellow-300 mb-1">Fiche Google Business manquante</div>
+                <p className="text-xs text-yellow-400/70 leading-relaxed">
+                  Votre fiche Google Business n&apos;est pas encore configurée. Une fiche optimisée améliore votre référencement local et votre visibilité sur Google Maps. Contactez-nous pour l&apos;activer.
+                </p>
+              </div>
+            </div>
+          )}
+          {project.google_business_url && (
+            <a
+              href={project.google_business_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-4 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5 hover:border-white/20 transition-all"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" fill="#4285F4"/>
+                  <path d="M17.6 12.2c0-.4 0-.8-.1-1.2H12v2.3h3.1c-.1.8-.6 1.5-1.3 1.9v1.6h2.1c1.2-1.1 1.9-2.8 1.7-4.6z" fill="#4285F4"/>
+                  <path d="M12 18c1.6 0 3-.5 4-1.4l-2.1-1.6c-.6.4-1.2.6-1.9.6-1.5 0-2.7-1-3.1-2.4H6.7v1.7C7.7 16.8 9.7 18 12 18z" fill="#34A853"/>
+                  <path d="M8.9 13.2c-.1-.4-.2-.8-.2-1.2s.1-.8.2-1.2V9.1H6.7C6.3 9.9 6 10.9 6 12s.3 2.1.7 2.9l2.2-1.7z" fill="#FBBC05"/>
+                  <path d="M12 8.4c.8 0 1.6.3 2.2.9l1.7-1.7C14.8 6.6 13.5 6 12 6 9.7 6 7.7 7.2 6.7 9.1l2.2 1.7C9.3 9.4 10.5 8.4 12 8.4z" fill="#EA4335"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-[#a1a1aa] uppercase tracking-widest mb-1">Fiche Google</div>
+                <div className="text-sm font-medium text-white">Voir ma fiche Google</div>
+              </div>
+              <ExternalLinkIcon className="w-3.5 h-3.5 text-[#a1a1aa] group-hover:text-white transition-colors shrink-0" />
+            </a>
           )}
 
           {/* Notes de l'équipe */}
@@ -163,6 +259,53 @@ export default async function ProjectPage() {
             <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-5">
               <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-3">Note de l'équipe</div>
               <p className="text-sm text-[#a1a1aa] leading-relaxed whitespace-pre-wrap">{project.notes}</p>
+            </div>
+          )}
+
+          {/* Équipe du projet */}
+          {teamMembers.length > 0 && (
+            <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5">
+              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-4">Notre équipe sur ce projet</div>
+              <div className="flex flex-wrap gap-3">
+                {teamMembers.map((m: { id: string; role_override: string | null; profile: { id: string; full_name: string | null; email: string; avatar_url: string | null; job_title: string | null; phone: string | null } }) => (
+                  <div key={m.id} className="flex items-center gap-3 bg-white/3 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                      {m.profile.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={m.profile.avatar_url} alt={m.profile.full_name || ''} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-semibold text-white uppercase">{(m.profile.full_name || m.profile.email)[0]}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-white">{m.profile.full_name || m.profile.email}</div>
+                      <div className="text-[10px] text-[#a1a1aa]">{m.role_override || m.profile.job_title || 'Orion Studio'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Apps & APIs */}
+          {projectApps.length > 0 && (
+            <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5">
+              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-4">Apps & APIs utilisées</div>
+              <div className="flex flex-wrap gap-2">
+                {projectApps.map((pa: { id: string; app: { id: string; name: string; logo_url: string | null; description: string | null } }) => (
+                  <div key={pa.id} className="flex items-center gap-2 bg-white/3 border border-white/8 rounded-xl px-3 py-2">
+                    {pa.app.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={pa.app.logo_url} alt={pa.app.name} className="w-5 h-5 object-contain rounded" />
+                    ) : (
+                      <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-white">{pa.app.name[0]}</span>
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-white">{pa.app.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -266,6 +409,22 @@ export default async function ProjectPage() {
           ))}
         </div>
       )}
+      {/* iClosed booking widget */}
+      <div className="mt-6 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#1e1e1e]">
+          <div className="text-sm font-semibold text-white">Réserver un call</div>
+          <div className="text-xs text-[#a1a1aa] mt-0.5">Discutez de votre projet avec notre équipe</div>
+        </div>
+        <div className="p-0">
+          <div
+            className="iclosed-widget"
+            data-url="https://app.iclosed.io/e/orion-studio/reservez-un-call-1-to-1"
+            data-width="100%"
+            data-height="600"
+          />
+          <script src="https://app.iclosed.io/assets/widget.js" async />
+        </div>
+      </div>
     </div>
   )
 }

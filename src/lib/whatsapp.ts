@@ -66,5 +66,14 @@ export function notifStatusChange(firstName: string, status: string): string {
     en_pause: 'En pause ⏸️',
   }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  if (status === 'termine') {
+    return notifProjectTermine(firstName)
+  }
   return `👋 Bonjour ${firstName},\n\nLe statut de votre projet a été mis à jour : *${labels[status] ?? status}*\n\nConnectez-vous pour voir les détails :\n${appUrl}/project`
+}
+
+export function notifProjectTermine(firstName: string): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const reviewUrl = process.env.NEXT_PUBLIC_REVIEW_URL ?? 'https://g.page/r/orion-studio/review'
+  return `🎉 Félicitations ${firstName} !\n\nVotre projet est maintenant *terminé* ✅\n\nNous espérons que vous êtes satisfait(e) du résultat. Si c'est le cas, un petit avis Google nous aiderait énormément :\n⭐ ${reviewUrl}\n\nMerci pour votre confiance !\n\nRetrouvez votre espace :\n${appUrl}/project`
 }

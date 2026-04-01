@@ -6,6 +6,8 @@ import { isWhatsAppConfigured } from '@/lib/whatsapp'
 import { StepMessage } from '@/types/database'
 import ProjectManager from '../../users/[profileId]/ProjectManager'
 import StepsManager from '../../users/[profileId]/StepsManager'
+import TeamSection from './TeamSection'
+import AppsSection from './AppsSection'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   en_cours: { label: 'En cours', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
@@ -33,11 +35,15 @@ export default async function AdminProjectEditPage({ params }: Props) {
 
   const profileId = project.profile_id
 
-  const [profileRes, filesRes, stepsRes, msgsRes] = await Promise.all([
+  const [profileRes, filesRes, stepsRes, msgsRes, adminsRes, teamRes, allAppsRes, projectAppsRes] = await Promise.all([
     admin.from('profiles').select('*').eq('id', profileId).single(),
     admin.from('project_files').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
     admin.from('project_steps').select('*').eq('project_id', projectId).order('position', { ascending: true }),
     admin.from('step_messages').select('*').eq('project_id', projectId).order('created_at', { ascending: true }),
+    admin.from('profiles').select('*').eq('role', 'admin').order('full_name'),
+    admin.from('project_team_members').select('*, profile:profiles(*)').eq('project_id', projectId),
+    admin.from('apps').select('*').order('name'),
+    admin.from('project_apps').select('app_id').eq('project_id', projectId),
   ])
 
   const targetProfile = profileRes.data
@@ -53,6 +59,12 @@ export default async function AdminProjectEditPage({ params }: Props) {
   const whatsappConfigured = isWhatsAppConfigured()
   const hasPhone = !!targetProfile?.phone
   const status = project.status ? STATUS_LABELS[project.status] : null
+
+  const allAdmins = adminsRes.data || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamMembers = (teamRes.data || []).map((m: any) => ({ ...m, profile: m.profile as any }))
+  const allApps = allAppsRes.data || []
+  const projectAppIds = (projectAppsRes.data || []).map(r => r.app_id)
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -108,6 +120,26 @@ export default async function AdminProjectEditPage({ params }: Props) {
           profileId={profileId}
           steps={steps}
           stepMessages={stepMessagesMap}
+        />
+      </div>
+
+      {/* Team section */}
+      <div className="mb-5">
+        <TeamSection
+          projectId={projectId}
+          profileId={profileId}
+          admins={allAdmins}
+          teamMembers={teamMembers}
+        />
+      </div>
+
+      {/* Apps section */}
+      <div className="mb-5">
+        <AppsSection
+          projectId={projectId}
+          profileId={profileId}
+          allApps={allApps}
+          projectAppIds={projectAppIds}
         />
       </div>
 
