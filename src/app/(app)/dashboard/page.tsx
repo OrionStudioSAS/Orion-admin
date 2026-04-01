@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Flow } from '@/types/database'
-import { FlowIcon, ArrowRightIcon, StarIcon, FolderIcon } from '@/components/ui/Icons'
-import ProjectDashboardClient from './ProjectDashboardClient'
+import { FlowIcon, ArrowRightIcon, StarIcon } from '@/components/ui/Icons'
 
 
 export default async function DashboardPage() {
@@ -23,51 +22,37 @@ export default async function DashboardPage() {
 
   // ── CLIENT DASHBOARD ──────────────────────────────────────────────────────
   if (!isAdmin) {
-    const { data: projectsData } = await admin
-      .from('projects')
-      .select('*, project_steps(*)')
-      .eq('profile_id', user.id)
-      .order('updated_at', { ascending: false })
+    // Client sees flows they have access to
+    const { data: accessRows } = await admin.from('flow_access').select('flow_id').eq('profile_id', user.id)
+    const accessIds = (accessRows || []).map(a => a.flow_id)
 
-    const projects = projectsData || []
-    const activeProject = projects.find(p => p.status === 'en_cours') || projects[0] || null
-
-    // Unread step messages
-    let unreadCount = 0
-    if (activeProject) {
-      const { count } = await admin
-        .from('step_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('project_id', activeProject.id)
-        .eq('is_admin_sender', true)
-        .eq('is_read', false)
-      unreadCount = count || 0
-    }
+    const clientFlows: Flow[] = accessIds.length > 0
+      ? (await admin.from('flows').select('*').in('id', accessIds).eq('is_active', true).order('created_at')).data || []
+      : []
 
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
+        <div className="mb-8 md:mb-10">
           <div className="flex items-center gap-2 mb-3">
             <StarIcon className="w-2.5 h-2.5 text-[#a1a1aa]" />
-            <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Tableau de bord</span>
+            <span className="text-[#a1a1aa] text-xs tracking-widest uppercase font-medium">Automatisations</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-semibold text-white">{greeting}, {firstName}</h1>
           <p className="text-[#a1a1aa] text-sm mt-2">
-            {projects.length === 0
-              ? "Votre espace projet est en cours de configuration."
-              : `${projects.length} projet${projects.length > 1 ? 's' : ''} · Bienvenue sur votre espace Orion Studio`}
+            {clientFlows.length === 0
+              ? "Aucune automatisation disponible pour le moment."
+              : `${clientFlows.length} automatisation${clientFlows.length > 1 ? 's' : ''} disponible${clientFlows.length > 1 ? 's' : ''}`}
           </p>
         </div>
 
-        {projects.length === 0 ? (
+        {clientFlows.length === 0 ? (
           <div className="border border-dashed border-[#1e1e1e] rounded-2xl p-8 md:p-16 text-center">
-            <FolderIcon className="w-8 h-8 text-[#52525b] mx-auto mb-3" />
-            <p className="text-[#a1a1aa] text-sm">Votre projet est en cours de configuration.</p>
-            <p className="text-[#52525b] text-xs mt-1">Votre espace sera disponible très prochainement.</p>
+            <p className="text-[#a1a1aa] text-sm">Aucune automatisation disponible pour le moment.</p>
           </div>
         ) : (
-          <ProjectDashboardClient projects={projects} unreadCount={unreadCount} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {clientFlows.map((flow) => <FlowCard key={flow.id} flow={flow} />)}
+          </div>
         )}
       </div>
     )
