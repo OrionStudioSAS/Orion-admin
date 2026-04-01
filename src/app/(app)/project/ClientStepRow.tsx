@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import StepChatPanel from '@/components/chat/StepChatPanel'
-import { approveStep } from '@/app/actions/projects'
+import { approveStep, unapproveStep } from '@/app/actions/projects'
 import { StepMessage } from '@/types/database'
 
 interface Step {
@@ -40,6 +40,13 @@ export default function ClientStepRow({ idx, step, isDone, isInProgress, msgs, u
     startApproveTransition(async () => {
       await approveStep(step.id, projectId)
       setApproved(true)
+    })
+  }
+
+  function handleUnapprove() {
+    startApproveTransition(async () => {
+      await unapproveStep(step.id, projectId)
+      setApproved(false)
     })
   }
 
@@ -117,10 +124,16 @@ export default function ClientStepRow({ idx, step, isDone, isInProgress, msgs, u
           </button>
         )}
         {approved && (
-          <span className="text-[9px] font-semibold text-green-400 border border-green-500/30 bg-green-500/10 rounded-full px-2 py-0.5 shrink-0 mt-0.5 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleUnapprove}
+            disabled={approving}
+            className="text-[9px] font-semibold text-green-400 border border-green-500/30 bg-green-500/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 rounded-full px-2 py-0.5 shrink-0 mt-0.5 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+            title="Retirer la validation"
+          >
             <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Validé
-          </span>
+            {approving ? '...' : 'Validé'}
+          </button>
         )}
 
         {/* Chat toggle */}

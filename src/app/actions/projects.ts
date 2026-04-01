@@ -51,7 +51,9 @@ export async function updateProjectById(projectId: string, profileId: string, da
     if (profile?.phone) {
       const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
       const msg = notifStatusChange(firstName, data.status)
-      sendWhatsAppMessage(profile.phone, msg).catch(() => {})
+      sendWhatsAppMessage(profile.phone, msg).catch((err) => {
+        console.error('[WhatsApp] Erreur envoi notification:', err)
+      })
     }
   }
 
@@ -76,7 +78,9 @@ export async function upsertProject(profileId: string, data: Partial<Project>) {
     if (profile?.phone) {
       const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
       const msg = notifStatusChange(firstName, data.status)
-      sendWhatsAppMessage(profile.phone, msg).catch(() => {})
+      sendWhatsAppMessage(profile.phone, msg).catch((err) => {
+        console.error('[WhatsApp] Erreur envoi notification:', err)
+      })
     }
   }
 
@@ -323,6 +327,19 @@ export async function approveStep(stepId: string, projectId: string): Promise<vo
   const { data: project } = await admin.from('projects').select('profile_id').eq('id', projectId).single()
   if (project?.profile_id !== user.id) throw new Error('Accès refusé')
   await admin.from('project_steps').update({ client_approved: true }).eq('id', stepId)
+  revalidatePath('/project')
+  revalidatePath('/admin/projects')
+  revalidatePath(`/admin/projects/${projectId}`)
+}
+
+export async function unapproveStep(stepId: string, projectId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non autorisé')
+  const admin = createAdminClient()
+  const { data: project } = await admin.from('projects').select('profile_id').eq('id', projectId).single()
+  if (project?.profile_id !== user.id) throw new Error('Accès refusé')
+  await admin.from('project_steps').update({ client_approved: false }).eq('id', stepId)
   revalidatePath('/project')
   revalidatePath('/admin/projects')
   revalidatePath(`/admin/projects/${projectId}`)

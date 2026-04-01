@@ -47,8 +47,11 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
   })
   if (error) throw new Error(error.message)
 
-  const { data: urlData } = admin.storage.from('project-files').getPublicUrl(path)
-  const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`
+  const { data: signedData, error: signError } = await admin.storage
+    .from('project-files')
+    .createSignedUrl(path, 315360000) // ~10 years
+  if (signError || !signedData?.signedUrl) throw new Error('Impossible de générer l\'URL de l\'avatar')
+  const publicUrl = signedData.signedUrl
 
   await admin.from('profiles').update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq('id', user.id)
   revalidatePath('/profile')
