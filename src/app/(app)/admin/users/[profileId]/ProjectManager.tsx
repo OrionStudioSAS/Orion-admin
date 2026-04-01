@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { updateProjectById, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink, getDownloadUrl } from '@/app/actions/projects'
+import { updateProjectById, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink, getDownloadUrl, updateFileInvoice } from '@/app/actions/projects'
 import { Project, ProjectFile } from '@/types/database'
 import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon, LinkIcon } from '@/components/ui/Icons'
 
@@ -11,6 +11,9 @@ const PLAN_OPTIONS = [
   { value: 'shopify_creation', label: 'Création Shopify' },
   { value: 'webflow_refonte', label: 'Refonte Webflow' },
   { value: 'shopify_refonte', label: 'Refonte Shopify' },
+  { value: 'automation', label: 'Automation' },
+  { value: 'design', label: 'Design' },
+  { value: 'maintenance', label: 'Maintenance' },
   { value: 'autre', label: 'Autre' },
 ]
 
@@ -535,6 +538,30 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                           <>{file.original_name}{file.size_bytes ? ` · ${formatBytes(file.size_bytes)}` : ''} · {new Date(file.created_at).toLocaleDateString('fr-FR')}</>
                         )}
                       </div>
+                      {file.category === 'invoice' && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            type="number"
+                            placeholder="Montant HT (€)"
+                            defaultValue={file.amount_ht ?? ''}
+                            onBlur={e => {
+                              const val = e.target.value ? parseFloat(e.target.value) : null
+                              if (val !== file.amount_ht) updateFileInvoice(file.id, { amount_ht: val }, profileId, projectId)
+                            }}
+                            className="w-28 bg-[#080808] border border-[#1e1e1e] text-white text-[10px] rounded px-2 py-1 placeholder-[#3f3f46] focus:outline-none focus:border-white/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateFileInvoice(file.id, { is_paid: !file.is_paid }, profileId, projectId)}
+                            className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer
+                              ${file.is_paid
+                                ? 'text-green-400 bg-green-500/10 border-green-500/30'
+                                : 'text-[#a1a1aa] bg-white/5 border-white/10 hover:border-white/20'}`}
+                          >
+                            {file.is_paid ? 'Payé ✓' : 'Non payé'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {/* Open link or download file */}
                     {file.type === 'link' && file.url ? (

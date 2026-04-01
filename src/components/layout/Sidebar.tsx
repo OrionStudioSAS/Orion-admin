@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon, FolderIcon, BuildingIcon, TargetIcon } from '@/components/ui/Icons'
+import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon, FolderIcon, BuildingIcon, TargetIcon, ChartBarIcon } from '@/components/ui/Icons'
 
 interface SidebarProps {
   profile: Profile
@@ -38,6 +38,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
       { href: '/admin/projects', icon: FolderIcon, label: 'Projets', section: null },
       { href: '/admin/clients', icon: BuildingIcon, label: 'Clients', section: null },
       { href: '/admin/prospection', icon: TargetIcon, label: 'Prospection', section: null },
+      { href: '/admin/overview', icon: ChartBarIcon, label: 'Overview', section: null },
     ] : []),
   ]
 

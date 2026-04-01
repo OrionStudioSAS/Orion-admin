@@ -11,7 +11,8 @@ const labelClass = "block text-[10px] text-[#a1a1aa] uppercase tracking-widest m
 
 const PLAN_LABELS: Record<string, string> = {
   webflow_creation: 'Création Webflow', shopify_creation: 'Création Shopify',
-  webflow_refonte: 'Refonte Webflow', shopify_refonte: 'Refonte Shopify', autre: 'Autre',
+  webflow_refonte: 'Refonte Webflow', shopify_refonte: 'Refonte Shopify',
+  automation: 'Automation', design: 'Design', maintenance: 'Maintenance', autre: 'Autre',
 }
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   en_cours: { label: 'En cours', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },

@@ -13,6 +13,9 @@ const PLAN_LABELS: Record<string, string> = {
   shopify_creation: 'Création Shopify',
   webflow_refonte: 'Refonte Webflow',
   shopify_refonte: 'Refonte Shopify',
+  automation: 'Automation',
+  design: 'Design',
+  maintenance: 'Maintenance',
   autre: 'Autre',
 }
 

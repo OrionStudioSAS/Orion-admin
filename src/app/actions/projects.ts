@@ -193,6 +193,16 @@ export async function toggleFileVisibility(fileId: string, visible: boolean, pro
   revalidatePath('/project')
 }
 
+export async function updateFileInvoice(fileId: string, data: { amount_ht?: number | null; is_paid?: boolean }, profileId: string, projectId?: string) {
+  const { admin } = await requireAdmin()
+  await admin.from('project_files').update(data).eq('id', fileId)
+  revalidatePath('/admin/projects')
+  if (projectId) revalidatePath(`/admin/projects/${projectId}`)
+  revalidatePath(`/admin/users/${profileId}`)
+  revalidatePath('/project')
+  revalidatePath('/admin/overview')
+}
+
 export async function sendProjectNotification(profileId: string, message: string) {
   await requireAdmin()
   const admin = createAdminClient()

@@ -113,7 +113,7 @@ export interface Database {
           id: string
           profile_id: string
           name: string | null
-          plan_type: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
+          plan_type: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'automation' | 'design' | 'maintenance' | 'autre' | null
           status: 'en_cours' | 'termine' | 'en_pause'
           figma_url: string | null
           site_url: string | null
@@ -129,7 +129,7 @@ export interface Database {
           id?: string
           profile_id: string
           name?: string | null
-          plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
+          plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'automation' | 'design' | 'maintenance' | 'autre' | null
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
           site_url?: string | null
@@ -143,7 +143,7 @@ export interface Database {
         }
         Update: {
           name?: string | null
-          plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'autre' | null
+          plan_type?: 'webflow_creation' | 'shopify_creation' | 'webflow_refonte' | 'shopify_refonte' | 'automation' | 'design' | 'maintenance' | 'autre' | null
           status?: 'en_cours' | 'termine' | 'en_pause'
           figma_url?: string | null
           site_url?: string | null
@@ -168,6 +168,8 @@ export interface Database {
           original_name: string | null
           size_bytes: number | null
           visible_to_client: boolean
+          amount_ht: number | null
+          is_paid: boolean
           created_at: string
         }
         Insert: {
@@ -181,12 +183,16 @@ export interface Database {
           original_name?: string | null
           size_bytes?: number | null
           visible_to_client?: boolean
+          amount_ht?: number | null
+          is_paid?: boolean
           created_at?: string
         }
         Update: {
           name?: string
           url?: string | null
           visible_to_client?: boolean
+          amount_ht?: number | null
+          is_paid?: boolean
         }
         Relationships: []
       }
@@ -328,7 +334,7 @@ export interface Database {
           sector: string | null
           location: string | null
           source: string
-          status: 'nouveau' | 'contacte' | 'en_discussion' | 'converti' | 'perdu'
+          status: 'nouveau' | 'contacte' | 'en_discussion' | 'rdv_pris' | 'converti' | 'perdu'
           notes: string | null
           created_at: string
           updated_at: string
@@ -344,7 +350,7 @@ export interface Database {
           sector?: string | null
           location?: string | null
           source?: string
-          status?: 'nouveau' | 'contacte' | 'en_discussion' | 'converti' | 'perdu'
+          status?: 'nouveau' | 'contacte' | 'en_discussion' | 'rdv_pris' | 'converti' | 'perdu'
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -359,7 +365,7 @@ export interface Database {
           sector?: string | null
           location?: string | null
           source?: string
-          status?: 'nouveau' | 'contacte' | 'en_discussion' | 'converti' | 'perdu'
+          status?: 'nouveau' | 'contacte' | 'en_discussion' | 'rdv_pris' | 'converti' | 'perdu'
           notes?: string | null
           updated_at?: string
         }

@@ -9,6 +9,7 @@ const STATUS_OPTIONS: { value: Prospect['status']; label: string; color: string 
   { value: 'nouveau', label: 'Nouveau', color: 'text-[#a1a1aa] bg-white/5 border-white/10' },
   { value: 'contacte', label: 'Contacté', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
   { value: 'en_discussion', label: 'En discussion', color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
+  { value: 'rdv_pris', label: 'RDV pris', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
   { value: 'converti', label: 'Converti ✓', color: 'text-green-400 bg-green-500/10 border-green-500/20' },
   { value: 'perdu', label: 'Perdu', color: 'text-red-400 bg-red-500/10 border-red-500/20' },
 ]
