@@ -145,12 +145,12 @@ export default function ProfileForm({ profile }: Props) {
             />
           </div>
           <div>
-            <label className={labelClass}>Métier / Rôle</label>
+            <label className={labelClass}>Métier</label>
             <input
               type="text"
               value={form.job_title}
               onChange={handleChange('job_title')}
-              placeholder="Directeur Marketing, CEO..."
+              placeholder="Co-fondateur, CEO, Designer..."
               className={inputClass}
             />
           </div>

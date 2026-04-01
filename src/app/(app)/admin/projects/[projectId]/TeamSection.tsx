@@ -105,11 +105,11 @@ export default function TeamSection({ projectId, profileId, admins, teamMembers 
                 ) : (
                   <div>
                     {admin.job_title && (
-                      <div className="text-[11px] text-[#a1a1aa]">Métier : {admin.job_title}</div>
+                      <div className="text-[11px] text-[#a1a1aa]">{admin.job_title}</div>
                     )}
                     <div className="flex items-center gap-1.5">
                       {isInTeam && member?.role_override && (
-                        <span className="text-[11px] text-blue-400">Rôle : {member.role_override}</span>
+                        <span className="text-[11px] text-blue-400">{member.role_override}</span>
                       )}
                       {isInTeam && (
                         <button

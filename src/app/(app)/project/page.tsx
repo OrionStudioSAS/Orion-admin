@@ -276,10 +276,10 @@ export default async function ProjectPage() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-white">{m.profile.full_name || m.profile.email}</div>
                       {m.profile.job_title && (
-                        <div className="text-[10px] text-[#a1a1aa] mt-0.5">Métier : {m.profile.job_title}</div>
+                        <div className="text-[10px] text-[#a1a1aa] mt-0.5">{m.profile.job_title}</div>
                       )}
                       {m.role_override && (
-                        <div className="text-[10px] text-blue-400 mt-0.5">Rôle : {m.role_override}</div>
+                        <div className="text-[10px] text-blue-400 mt-0.5">{m.role_override}</div>
                       )}
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         {m.profile.email && (
