@@ -61,7 +61,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
         {/* Close button mobile */}
         <button
           onClick={() => setOpen(false)}
-          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
+          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all cursor-pointer"
         >
           <XIcon className="w-4 h-4" />
         </button>
@@ -138,7 +138,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           </span>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 text-[#a1a1aa] hover:text-white text-xs transition-colors"
+            className="flex items-center gap-1.5 text-[#a1a1aa] hover:text-white text-xs transition-colors cursor-pointer"
           >
             <LogOutIcon className="w-3.5 h-3.5" />
             Déconnexion
@@ -164,7 +164,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           )}
           <button
             onClick={() => setOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all cursor-pointer"
           >
             <MenuIcon className="w-5 h-5" />
           </button>

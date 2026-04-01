@@ -220,7 +220,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
           </div>
           <div>
             <label className={labelClass}>Offre / Plan</label>
-            <select value={form.plan_type} onChange={handleChange('plan_type')} className={inputClass}>
+            <select value={form.plan_type} onChange={handleChange('plan_type')} className={`${inputClass} cursor-pointer`}>
               {PLAN_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
@@ -232,7 +232,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                   key={s.value}
                   type="button"
                   onClick={() => { setForm(p => ({ ...p, status: s.value as Project['status'] })); setSaved(false) }}
-                  className={`flex-1 text-[10px] font-semibold py-2 rounded-lg border transition-all
+                  className={`flex-1 text-[10px] font-semibold py-2 rounded-lg border transition-all cursor-pointer
                     ${form.status === s.value ? s.color : 'text-[#a1a1aa] border-[#1e1e1e] bg-transparent hover:border-white/10'}`}
                 >
                   {s.label}
@@ -267,7 +267,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
         <button
           type="submit"
           disabled={isPending}
-          className="flex items-center gap-2 bg-white text-black text-xs font-semibold px-5 py-2.5 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+          className="flex items-center gap-2 bg-white text-black text-xs font-semibold px-5 py-2.5 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all cursor-pointer"
         >
           {saved && <CheckIcon className="w-3.5 h-3.5" />}
           {isPending ? 'Enregistrement...' : saved ? 'Enregistré !' : 'Enregistrer'}
@@ -308,7 +308,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                 type="button"
                 onClick={() => setWaMessage(p.text)}
                 disabled={!whatsappConfigured || !hasPhone}
-                className="text-[10px] text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="text-[10px] text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {p.label}
               </button>
@@ -330,7 +330,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
             type="button"
             onClick={handleWaSend}
             disabled={!whatsappConfigured || !hasPhone || !waMessage.trim() || waSending}
-            className="h-[88px] w-10 flex items-center justify-center bg-white text-black rounded-xl hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+            className="h-[88px] w-10 flex items-center justify-center bg-white text-black rounded-xl hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer"
           >
             {waSending ? (
               <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
@@ -367,7 +367,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                 <button
                   type="button"
                   onClick={() => { setLinkCategory(isAddingLink ? null : key); setLinkForm({ name: '', url: '', visible: true }); setLinkError('') }}
-                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer
                     ${isAddingLink ? 'bg-white text-black border-white' : 'text-[#a1a1aa] border-[#1e1e1e] hover:text-white hover:border-white/20'}`}
                 >
                   <LinkIcon className="w-3 h-3" />
@@ -429,7 +429,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                     type="button"
                     onClick={() => handleAddLink(key)}
                     disabled={linkLoading || !linkForm.name.trim() || !linkForm.url.trim()}
-                    className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+                    className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all cursor-pointer"
                   >
                     <LinkIcon className="w-3.5 h-3.5" />
                     {linkLoading ? 'Ajout...' : 'Ajouter le lien'}
@@ -437,7 +437,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                   <button
                     type="button"
                     onClick={() => setLinkCategory(null)}
-                    className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+                    className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all cursor-pointer"
                   >
                     Annuler
                   </button>
@@ -466,7 +466,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                       type="button"
                       onClick={handleUpload}
                       disabled={uploadLoading || !uploadName.trim()}
-                      className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+                      className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all cursor-pointer"
                     >
                       <UploadIcon className="w-3.5 h-3.5" />
                       {uploadLoading ? 'Envoi...' : 'Uploader'}
@@ -474,7 +474,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                     <button
                       type="button"
                       onClick={() => { setPendingFile(null); setUploadingCategory(null); setUploadName(''); setUploadVisible(true) }}
-                      className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+                      className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all cursor-pointer"
                     >
                       Annuler
                     </button>
@@ -540,7 +540,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                         type="button"
                         onClick={() => handleDownload(file.id, file.storage_path!, file.original_name || file.name)}
                         disabled={downloadingId === file.id}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all disabled:opacity-40"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all disabled:opacity-40 cursor-pointer"
                         title="Télécharger"
                       >
                         {downloadingId === file.id
@@ -553,7 +553,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                       onClick={() => handleToggleVisibility(file.id, file.visible_to_client)}
                       disabled={isPending}
                       title={file.visible_to_client ? 'Masquer au client' : 'Rendre visible au client'}
-                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all cursor-pointer
                         ${file.visible_to_client ? 'text-[#a1a1aa] hover:text-white hover:bg-white/5' : 'text-[#52525b] hover:text-green-400 hover:bg-green-500/10'}`}
                     >
                       {file.visible_to_client ? <EyeIcon className="w-3.5 h-3.5" /> : <EyeOffIcon className="w-3.5 h-3.5" />}
@@ -561,7 +561,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                     <button
                       onClick={() => handleDelete(file.id, file.storage_path ?? null)}
                       disabled={isPending}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#a1a1aa] hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
                     >
                       <TrashIcon className="w-3.5 h-3.5" />
                     </button>

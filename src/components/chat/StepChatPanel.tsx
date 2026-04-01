@@ -102,7 +102,7 @@ export default function StepChatPanel({ stepId, projectId, profileId, isAdmin, i
                         <button
                           type="button"
                           onClick={() => handleDownloadAttachment(msg)}
-                          className="block"
+                          className="block cursor-pointer"
                           title="Télécharger"
                         >
                           <div className={`text-[10px] mb-1 flex items-center gap-1 ${isMine ? 'text-black/60' : 'text-[#a1a1aa]'}`}>
@@ -116,7 +116,7 @@ export default function StepChatPanel({ stepId, projectId, profileId, isAdmin, i
                           type="button"
                           onClick={() => handleDownloadAttachment(msg)}
                           disabled={downloadingId === msg.id}
-                          className={`flex items-center gap-1.5 text-[11px] rounded-lg px-2 py-1.5 transition-all
+                          className={`flex items-center gap-1.5 text-[11px] rounded-lg px-2 py-1.5 transition-all cursor-pointer
                             ${isMine ? 'bg-black/10 hover:bg-black/20 text-black' : 'bg-white/5 hover:bg-white/10 text-[#a1a1aa] hover:text-white'}`}
                         >
                           {downloadingId === msg.id ? (
@@ -148,7 +148,7 @@ export default function StepChatPanel({ stepId, projectId, profileId, isAdmin, i
             <svg className="w-3.5 h-3.5 text-[#a1a1aa] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" strokeLinejoin="round"/></svg>
             <span className="text-[11px] text-[#a1a1aa] truncate flex-1">{pendingFile.name}</span>
             <button type="button" onClick={() => { setPendingFile(null); if (fileRef.current) fileRef.current.value = '' }}
-              className="text-[#52525b] hover:text-white transition-colors text-xs">✕</button>
+              className="text-[#52525b] hover:text-white transition-colors text-xs cursor-pointer">✕</button>
           </div>
         )}
         {error && <p className="text-[11px] text-red-400 mb-2">{error}</p>}
@@ -174,7 +174,7 @@ export default function StepChatPanel({ stepId, projectId, profileId, isAdmin, i
             type="button"
             onClick={handleSend}
             disabled={isPending || (!input.trim() && !pendingFile)}
-            className="w-7 h-7 flex items-center justify-center bg-white text-black rounded-lg hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+            className="w-7 h-7 flex items-center justify-center bg-white text-black rounded-lg hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer"
           >
             {isPending ? (
               <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />

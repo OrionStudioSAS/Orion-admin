@@ -29,7 +29,7 @@ export default function CreateProjectButton({ profileId }: { profileId: string }
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-white text-black text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-white/90 transition-all"
+        className="flex items-center gap-2 bg-white text-black text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-white/90 transition-all cursor-pointer"
       >
         <PlusIcon className="w-3.5 h-3.5" />
         Nouveau projet
@@ -51,13 +51,13 @@ export default function CreateProjectButton({ profileId }: { profileId: string }
       <button
         onClick={handleCreate}
         disabled={isPending || !name.trim()}
-        className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-xl hover:bg-white/90 disabled:opacity-50 transition-all"
+        className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-xl hover:bg-white/90 disabled:opacity-50 transition-all cursor-pointer"
       >
         {isPending ? 'Création...' : 'Créer'}
       </button>
       <button
         onClick={() => { setOpen(false); setName('') }}
-        className="text-[#a1a1aa] text-xs px-3 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-all"
+        className="text-[#a1a1aa] text-xs px-3 py-2 rounded-xl hover:text-white hover:bg-white/5 transition-all cursor-pointer"
       >
         Annuler
       </button>

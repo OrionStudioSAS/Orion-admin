@@ -13,11 +13,35 @@ const STATUS_OPTIONS = [
 ] as const
 
 const inputClass = "w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
-const dateClass = "bg-[#080808] border border-[#1e1e1e] text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-white/30 transition-colors [color-scheme:dark]"
+const dateClass = "bg-[#080808] border border-[#1e1e1e] text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-white/30 transition-colors [color-scheme:dark] cursor-pointer"
 
 function formatDate(d: string | null) {
   if (!d) return null
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+}
+
+function StepCircle({ status, idx }: { status: string; idx: number }) {
+  if (status === 'done') {
+    return (
+      <div className="w-5 h-5 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center shrink-0 mt-0.5">
+        <svg className="w-2.5 h-2.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    )
+  }
+  if (status === 'in_progress') {
+    return (
+      <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center shrink-0 mt-0.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+      </div>
+    )
+  }
+  return (
+    <div className="w-5 h-5 rounded-full border border-[#2a2a2a] flex items-center justify-center shrink-0 mt-0.5">
+      <span className="text-[9px] text-[#52525b] font-mono">{idx + 1}</span>
+    </div>
+  )
 }
 
 interface Props {
@@ -63,7 +87,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
 
   function handleStatusChange(step: ProjectStep, status: 'todo' | 'in_progress' | 'done') {
     startTransition(async () => {
-      await updateStep(step.id, profileId, { status })
+      await updateStep(step.id, profileId, { status }, projectId)
     })
   }
 
@@ -85,7 +109,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
         description: editForm.description.trim() || null,
         start_date: editForm.start_date || null,
         end_date: editForm.end_date || null,
-      })
+      }, projectId)
       setEditingId(null)
     })
   }
@@ -93,7 +117,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
   function handleDelete(stepId: string) {
     if (!confirm('Supprimer cette étape ?')) return
     startTransition(async () => {
-      await deleteStep(stepId, profileId)
+      await deleteStep(stepId, profileId, projectId)
     })
   }
 
@@ -117,22 +141,31 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
   }
 
   const donePct = localOrder.length ? Math.round(localOrder.filter(s => s.status === 'done').length / localOrder.length * 100) : 0
+  const inProgressCount = localOrder.filter(s => s.status === 'in_progress').length
+  const doneCount = localOrder.filter(s => s.status === 'done').length
 
   return (
     <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
         <div>
           <div className="text-sm font-semibold text-white">Étapes du projet</div>
-          <div className="text-xs text-[#a1a1aa] mt-0.5">
-            {localOrder.length > 0
-              ? `${localOrder.filter(s => s.status === 'done').length} / ${localOrder.length} terminées`
-              : 'Aucune étape définie'}
+          <div className="text-xs text-[#a1a1aa] mt-0.5 flex items-center gap-2">
+            {localOrder.length > 0 ? (
+              <>
+                <span>{doneCount}/{localOrder.length} terminées</span>
+                {inProgressCount > 0 && (
+                  <span className="text-blue-400 text-[10px] font-medium bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full">
+                    {inProgressCount} en cours
+                  </span>
+                )}
+              </>
+            ) : 'Aucune étape définie'}
           </div>
         </div>
         <button
           type="button"
           onClick={() => { setAdding(a => !a); setNewTitle(''); setNewDesc('') }}
-          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer
             ${adding ? 'bg-white text-black border-white' : 'text-[#a1a1aa] border-[#1e1e1e] hover:text-white hover:border-white/20'}`}
         >
           <PlusIcon className="w-3 h-3" />
@@ -145,10 +178,13 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
         <div className="px-5 pt-4 pb-1">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] text-[#a1a1aa] uppercase tracking-widest">Progression</span>
-            <span className="text-[10px] text-[#a1a1aa]">{donePct}%</span>
+            <span className={`text-[10px] font-medium ${donePct === 100 ? 'text-green-400' : donePct > 0 ? 'text-blue-400' : 'text-[#a1a1aa]'}`}>{donePct}%</span>
           </div>
           <div className="h-1.5 bg-[#1e1e1e] rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${donePct}%` }} />
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${donePct === 100 ? 'bg-green-400' : 'bg-blue-400'}`}
+              style={{ width: `${donePct}%` }}
+            />
           </div>
         </div>
       )}
@@ -179,7 +215,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                 type="button"
                 onClick={handleAdd}
                 disabled={isPending || !newTitle.trim()}
-                className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+                className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-4 py-2 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all cursor-pointer"
               >
                 <PlusIcon className="w-3.5 h-3.5" />
                 {isPending ? 'Ajout...' : 'Ajouter'}
@@ -187,7 +223,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
               <button
                 type="button"
                 onClick={() => setAdding(false)}
-                className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+                className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all cursor-pointer"
               >
                 Annuler
               </button>
@@ -258,7 +294,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                         type="button"
                         onClick={() => handleEditSave(step)}
                         disabled={isPending || !editForm.title.trim()}
-                        className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all"
+                        className="flex items-center gap-1.5 bg-white text-black text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white/90 disabled:opacity-50 transition-all cursor-pointer"
                       >
                         <CheckIcon className="w-3 h-3" />
                         Enregistrer
@@ -266,7 +302,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
-                        className="text-[#a1a1aa] text-xs px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all"
+                        className="text-[#a1a1aa] text-xs px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all cursor-pointer"
                       >
                         Annuler
                       </button>
@@ -276,17 +312,15 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                   <div>
                     <div className="flex items-start gap-3">
                       {/* Drag handle */}
-                      <div className="mt-1 cursor-grab text-[#3f3f46] hover:text-[#a1a1aa] transition-colors shrink-0">
+                      <div className="mt-1 cursor-grab active:cursor-grabbing text-[#3f3f46] hover:text-[#a1a1aa] transition-colors shrink-0">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <circle cx="9" cy="7" r="1" fill="currentColor" /><circle cx="15" cy="7" r="1" fill="currentColor" />
                           <circle cx="9" cy="12" r="1" fill="currentColor" /><circle cx="15" cy="12" r="1" fill="currentColor" />
                           <circle cx="9" cy="17" r="1" fill="currentColor" /><circle cx="15" cy="17" r="1" fill="currentColor" />
                         </svg>
                       </div>
-                      {/* Step number */}
-                      <div className="w-5 h-5 rounded-full border border-[#2a2a2a] flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-[9px] text-[#a1a1aa] font-mono">{idx + 1}</span>
-                      </div>
+                      {/* Status circle */}
+                      <StepCircle status={step.status} idx={idx} />
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div
@@ -296,21 +330,20 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                           {step.title}
                         </div>
                         {step.description && (
-                          <div className="text-xs text-[#a1a1aa] mt-0.5">{step.description}</div>
+                          <div className="text-xs text-[#52525b] mt-0.5">{step.description}</div>
                         )}
                         {/* Dates */}
                         {(step.start_date || step.end_date) && (
                           <div className="flex items-center gap-2 mt-1">
                             {step.start_date && (
-                              <span className="text-[10px] text-[#52525b]">
-                                Début : <span className="text-[#a1a1aa]">{formatDate(step.start_date)}</span>
+                              <span className="text-[10px] text-[#52525b] flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+                                <span className="text-[#a1a1aa]">{formatDate(step.start_date)}</span>
                               </span>
                             )}
-                            {step.start_date && step.end_date && <span className="text-[#3f3f46]">·</span>}
+                            {step.start_date && step.end_date && <span className="text-[#3f3f46]">→</span>}
                             {step.end_date && (
-                              <span className="text-[10px] text-[#52525b]">
-                                Fin : <span className="text-[#a1a1aa]">{formatDate(step.end_date)}</span>
-                              </span>
+                              <span className="text-[10px] text-[#a1a1aa]">{formatDate(step.end_date)}</span>
                             )}
                           </div>
                         )}
@@ -319,8 +352,12 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                       <button
                         type="button"
                         onClick={() => setOpenChatId(isOpen ? null : step.id)}
-                        className={`relative flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border transition-all
-                          ${isOpen ? 'bg-white/10 text-white border-white/20' : 'text-[#52525b] border-[#1e1e1e] hover:text-[#a1a1aa] hover:border-white/10'}`}
+                        className={`relative flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border transition-all cursor-pointer
+                          ${isOpen
+                            ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                            : unread > 0
+                              ? 'text-blue-400 border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10'
+                              : 'text-[#52525b] border-[#1e1e1e] hover:text-[#a1a1aa] hover:border-white/10'}`}
                         title="Chat"
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -348,7 +385,7 @@ export default function StepsManager({ projectId, profileId, steps, stepMessages
                         type="button"
                         onClick={() => handleDelete(step.id)}
                         disabled={isPending}
-                        className="w-6 h-6 flex items-center justify-center rounded-lg text-[#3f3f46] hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0 mt-0.5"
+                        className="w-6 h-6 flex items-center justify-center rounded-lg text-[#3f3f46] hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0 mt-0.5 cursor-pointer"
                       >
                         <TrashIcon className="w-3 h-3" />
                       </button>
