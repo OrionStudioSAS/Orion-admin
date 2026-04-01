@@ -359,8 +359,17 @@ export default function ProspectionPanel({ prospects }: Props) {
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {prospect.contact_name && <span className="text-xs text-[#a1a1aa]">{prospect.contact_name}</span>}
                         {prospect.email && <span className="text-xs text-[#52525b]">{prospect.email}</span>}
+                        {prospect.phone && (
+                          <a href={`tel:${prospect.phone}`} className="text-xs text-[#52525b] hover:text-white transition-colors flex items-center gap-1">
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" strokeLinecap="round"/></svg>
+                            {prospect.phone}
+                          </a>
+                        )}
                         {prospect.source !== 'manuel' && <span className="text-[10px] text-[#52525b]">via {prospect.source}</span>}
                       </div>
+                      {prospect.notes && (
+                        <div className="mt-1.5 text-[11px] text-[#52525b] leading-relaxed line-clamp-2">{prospect.notes}</div>
+                      )}
                     </div>
 
                     {/* Status */}

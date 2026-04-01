@@ -118,10 +118,15 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
           onClick={() => setOpen(false)}
           className="flex items-center gap-3 mb-3 group"
         >
-          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
-            <span className="text-xs font-semibold text-white uppercase">
-              {(profile.full_name || profile.email)[0]}
-            </span>
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors overflow-hidden">
+            {profile.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.avatar_url} alt={profile.full_name || ''} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs font-semibold text-white uppercase">
+                {(profile.full_name || profile.email)[0]}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-white truncate group-hover:text-white/80 transition-colors">

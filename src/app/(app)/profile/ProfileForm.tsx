@@ -50,6 +50,7 @@ export default function ProfileForm({ profile }: Props) {
   const [form, setForm] = useState({
     full_name: profile.full_name || '',
     job_title: profile.job_title || '',
+    linkedin_url: profile.linkedin_url || '',
     company: profile.company || '',
     website: profile.website || '',
     webflow_site: profile.webflow_site || '',
@@ -150,6 +151,16 @@ export default function ProfileForm({ profile }: Props) {
               value={form.job_title}
               onChange={handleChange('job_title')}
               placeholder="Directeur Marketing, CEO..."
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>LinkedIn</label>
+            <input
+              type="url"
+              value={form.linkedin_url}
+              onChange={handleChange('linkedin_url')}
+              placeholder="https://linkedin.com/in/..."
               className={inputClass}
             />
           </div>

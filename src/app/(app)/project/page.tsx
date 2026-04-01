@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { StarIcon, ExternalLinkIcon, FolderIcon } from '@/components/ui/Icons'
+import { StarIcon, ExternalLinkIcon, FolderIcon, LinkedInIcon } from '@/components/ui/Icons'
 import DownloadButton from './DownloadButton'
 import OpenLinkButton from './OpenLinkButton'
 import ClientStepRow from './ClientStepRow'
@@ -209,7 +209,7 @@ export default async function ProjectPage() {
           )}
 
           {/* Google Business warning if missing */}
-          {!project.google_business_url && project.status !== 'termine' && (
+          {!project.google_business_url && (
             <div className="flex items-start gap-3 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-4">
               <div className="w-8 h-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0 mt-0.5">
                 <svg className="w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -261,21 +261,46 @@ export default async function ProjectPage() {
           {/* Équipe du projet */}
           {teamMembers.length > 0 && (
             <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5">
-              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-4">Notre équipe sur ce projet</div>
-              <div className="flex flex-wrap gap-3">
-                {teamMembers.map((m: { id: string; role_override: string | null; profile: { id: string; full_name: string | null; email: string; avatar_url: string | null; job_title: string | null; phone: string | null } }) => (
-                  <div key={m.id} className="flex items-center gap-3 bg-white/3 border border-white/8 rounded-xl px-3 py-2.5">
-                    <div className="w-9 h-9 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-4">Équipe du projet</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {teamMembers.map((m: { id: string; role_override: string | null; profile: { id: string; full_name: string | null; email: string; avatar_url: string | null; job_title: string | null; linkedin_url: string | null; phone: string | null } }) => (
+                  <div key={m.id} className="flex gap-3 bg-white/3 border border-white/8 rounded-xl p-3">
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
                       {m.profile.avatar_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.profile.avatar_url} alt={m.profile.full_name || ''} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-xs font-semibold text-white uppercase">{(m.profile.full_name || m.profile.email)[0]}</span>
+                        <span className="text-sm font-semibold text-white uppercase">{(m.profile.full_name || m.profile.email)[0]}</span>
                       )}
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-white">{m.profile.full_name || m.profile.email}</div>
-                      <div className="text-[10px] text-[#a1a1aa]">{m.role_override || m.profile.job_title || 'Orion Studio'}</div>
+                      {m.profile.job_title && (
+                        <div className="text-[10px] text-[#a1a1aa] mt-0.5">Métier : {m.profile.job_title}</div>
+                      )}
+                      {m.role_override && (
+                        <div className="text-[10px] text-blue-400 mt-0.5">Rôle : {m.role_override}</div>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {m.profile.email && (
+                          <a href={`mailto:${m.profile.email}`} className="text-[10px] text-[#52525b] hover:text-white transition-colors flex items-center gap-1">
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            {m.profile.email}
+                          </a>
+                        )}
+                        {m.profile.phone && (
+                          <a href={`tel:${m.profile.phone}`} className="text-[10px] text-[#52525b] hover:text-white transition-colors flex items-center gap-1">
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" strokeLinecap="round"/></svg>
+                            {m.profile.phone}
+                          </a>
+                        )}
+                        {m.profile.linkedin_url && (
+                          <a href={m.profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#52525b] hover:text-blue-400 transition-colors flex items-center gap-1">
+                            <LinkedInIcon className="w-3 h-3" />
+                            LinkedIn
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -286,7 +311,7 @@ export default async function ProjectPage() {
           {/* Apps & APIs */}
           {projectApps.length > 0 && (
             <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5">
-              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-4">Apps & APIs utilisées</div>
+              <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest font-medium mb-4">Apps</div>
               <div className="flex flex-wrap gap-2">
                 {projectApps.map((pa: { id: string; app: { id: string; name: string; logo_url: string | null; description: string | null } }) => (
                   <div key={pa.id} className="flex items-center gap-2 bg-white/3 border border-white/8 rounded-xl px-3 py-2">

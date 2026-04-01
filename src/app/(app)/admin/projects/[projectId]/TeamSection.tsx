@@ -103,20 +103,25 @@ export default function TeamSection({ projectId, profileId, admins, teamMembers 
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-[#a1a1aa]">
-                      {member?.role_override || admin.job_title || 'Orion Studio'}
-                    </span>
-                    {isInTeam && (
-                      <button
-                        type="button"
-                        onClick={() => startEditRole(member!)}
-                        className="text-[10px] text-[#52525b] hover:text-[#a1a1aa] transition-colors cursor-pointer"
-                        title="Modifier le rôle"
-                      >
-                        ✎
-                      </button>
+                  <div>
+                    {admin.job_title && (
+                      <div className="text-[11px] text-[#a1a1aa]">Métier : {admin.job_title}</div>
                     )}
+                    <div className="flex items-center gap-1.5">
+                      {isInTeam && member?.role_override && (
+                        <span className="text-[11px] text-blue-400">Rôle : {member.role_override}</span>
+                      )}
+                      {isInTeam && (
+                        <button
+                          type="button"
+                          onClick={() => startEditRole(member!)}
+                          className="text-[10px] text-[#52525b] hover:text-[#a1a1aa] transition-colors cursor-pointer"
+                          title="Modifier le rôle sur ce projet"
+                        >
+                          ✎
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
                 {admin.email && (

@@ -11,6 +11,7 @@ export async function updateProfile(data: {
   webflow_site?: string
   phone?: string
   job_title?: string
+  linkedin_url?: string
   avatar_url?: string | null
 }) {
   const supabase = await createClient()

@@ -166,11 +166,16 @@ export default function UsersTable({ profiles, flows, accessList, currentUserId 
             <div key={profile.id} className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
               <div className="flex items-center gap-2 md:gap-4 px-3 md:px-5 py-3 md:py-4">
                 {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border overflow-hidden
                   ${isAdmin ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/5'}`}>
-                  <span className={`text-xs font-semibold uppercase ${isAdmin ? 'text-white' : 'text-[#a1a1aa]'}`}>
-                    {(profile.full_name || profile.email)[0]}
-                  </span>
+                  {profile.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.avatar_url} alt={profile.full_name || ''} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className={`text-xs font-semibold uppercase ${isAdmin ? 'text-white' : 'text-[#a1a1aa]'}`}>
+                      {(profile.full_name || profile.email)[0]}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">

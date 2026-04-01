@@ -72,7 +72,7 @@ export default function AppsSection({ projectId, profileId, allApps, projectAppI
     <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
         <div>
-          <div className="text-sm font-semibold text-white">Apps & APIs utilisées</div>
+          <div className="text-sm font-semibold text-white">Apps</div>
           <div className="text-xs text-[#a1a1aa] mt-0.5">Outils et intégrations du projet</div>
         </div>
         <button

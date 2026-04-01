@@ -15,6 +15,7 @@ export interface Database {
           phone: string | null
           avatar_url: string | null
           job_title: string | null
+          linkedin_url: string | null
           created_at: string
           updated_at: string
         }
@@ -29,6 +30,7 @@ export interface Database {
           phone?: string | null
           avatar_url?: string | null
           job_title?: string | null
+          linkedin_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export interface Database {
           phone?: string | null
           avatar_url?: string | null
           job_title?: string | null
+          linkedin_url?: string | null
           updated_at?: string
         }
         Relationships: []

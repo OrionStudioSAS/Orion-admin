@@ -92,8 +92,13 @@ export default function ClientsPanel({ clients }: Props) {
                 className="group bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl px-4 md:px-6 py-4 hover:border-white/20 transition-all flex items-center gap-4"
               >
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-sm font-semibold text-white">
-                  {initials}
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-sm font-semibold text-white overflow-hidden">
+                  {client.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={client.avatar_url} alt={client.full_name || ''} className="w-full h-full object-cover" />
+                  ) : (
+                    initials
+                  )}
                 </div>
 
                 {/* Main info */}
