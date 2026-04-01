@@ -53,14 +53,14 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
-          <div className="text-[#a1a1aa] text-xs tracking-widest uppercase mb-6 font-medium">Automatisez votre croissance</div>
+          <div className="text-[#a1a1aa] text-xs tracking-widest uppercase mb-6 font-medium">Votre espace client</div>
           <h1 className="text-4xl font-light text-white leading-tight mb-4">
-            Gérez vos<br />
-            <span className="font-semibold">automations</span><br />
-            en un clic
+            Pilotez vos<br />
+            <span className="font-semibold">projets &amp; automatisations</span><br />
+            en un seul endroit
           </h1>
           <p className="text-[#a1a1aa] text-sm leading-relaxed max-w-xs">
-            Déclenchez vos workflows N8N, créez du contenu, gérez vos pages CMS — tout depuis une interface unifiée.
+            Suivi de projet, fichiers, factures, automatisations et communication — tout centralisé dans votre dashboard Orion Studio.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-white mb-2">Connexion</h2>
-            <p className="text-[#a1a1aa] text-sm">Accédez à votre espace automations</p>
+            <p className="text-[#a1a1aa] text-sm">Accédez à votre espace de gestion</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
