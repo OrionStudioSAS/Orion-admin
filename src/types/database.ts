@@ -334,6 +334,7 @@ export interface Database {
           sector: string | null
           location: string | null
           source: string
+          channel: 'email' | 'cold_call'
           status: 'nouveau' | 'contacte' | 'en_discussion' | 'rdv_pris' | 'converti' | 'perdu'
           notes: string | null
           created_at: string
@@ -350,6 +351,7 @@ export interface Database {
           sector?: string | null
           location?: string | null
           source?: string
+          channel?: 'email' | 'cold_call'
           status?: 'nouveau' | 'contacte' | 'en_discussion' | 'rdv_pris' | 'converti' | 'perdu'
           notes?: string | null
           created_at?: string
@@ -365,6 +367,7 @@ export interface Database {
           sector?: string | null
           location?: string | null
           source?: string
+          channel?: 'email' | 'cold_call'
           status?: 'nouveau' | 'contacte' | 'en_discussion' | 'rdv_pris' | 'converti' | 'perdu'
           notes?: string | null
           updated_at?: string

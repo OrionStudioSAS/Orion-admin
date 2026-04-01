@@ -17,27 +17,29 @@ const STATUS_OPTIONS: { value: Prospect['status']; label: string; color: string 
 const inputClass = "w-full bg-[#080808] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2.5 placeholder-[#52525b] focus:outline-none focus:border-white/30 transition-colors"
 const labelClass = "block text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-1.5"
 
-const EMPTY_FORM = {
-  company_name: '',
-  contact_name: '',
-  email: '',
-  phone: '',
-  linkedin_url: '',
-  website: '',
-  sector: '',
-  location: '',
-  source: 'manuel',
-  notes: '',
-}
+type Channel = 'email' | 'cold_call'
+
+const CHANNELS: { value: Channel; label: string; icon: React.ReactNode }[] = [
+  {
+    value: 'email',
+    label: 'Prospection Email',
+    icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  },
+  {
+    value: 'cold_call',
+    label: 'Prospection Cold Call',
+    icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" strokeLinecap="round"/></svg>,
+  },
+]
 
 interface Props {
   prospects: Prospect[]
 }
 
 export default function ProspectionPanel({ prospects }: Props) {
+  const [activeChannel, setActiveChannel] = useState<Channel>('email')
   const [isPending, startTransition] = useTransition()
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -48,6 +50,13 @@ export default function ProspectionPanel({ prospects }: Props) {
   const [convertForm, setConvertForm] = useState({ email: '', full_name: '', password: '' })
   const [convertLoading, setConvertLoading] = useState(false)
   const [convertError, setConvertError] = useState('')
+
+  const emptyForm = () => ({
+    company_name: '', contact_name: '', email: '', phone: '',
+    linkedin_url: '', website: '', sector: '', location: '',
+    source: 'manuel', notes: '',
+  })
+  const [form, setForm] = useState(emptyForm())
 
   function handleFormChange(key: string) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -71,9 +80,10 @@ export default function ProspectionPanel({ prospects }: Props) {
         sector: form.sector || undefined,
         location: form.location || undefined,
         source: form.source || 'manuel',
+        channel: activeChannel,
         notes: form.notes || undefined,
       })
-      setForm(EMPTY_FORM)
+      setForm(emptyForm())
       setShowAdd(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Erreur')
@@ -82,16 +92,12 @@ export default function ProspectionPanel({ prospects }: Props) {
   }
 
   function handleStatusChange(prospect: Prospect, status: Prospect['status']) {
-    startTransition(async () => {
-      await updateProspect(prospect.id, { status })
-    })
+    startTransition(async () => { await updateProspect(prospect.id, { status }) })
   }
 
   function handleDelete(id: string) {
     if (!confirm('Supprimer ce prospect ?')) return
-    startTransition(async () => {
-      await deleteProspect(id)
-    })
+    startTransition(async () => { await deleteProspect(id) })
   }
 
   function startEdit(prospect: Prospect) {
@@ -116,10 +122,7 @@ export default function ProspectionPanel({ prospects }: Props) {
   }
 
   async function handleEditSave(id: string) {
-    startTransition(async () => {
-      await updateProspect(id, editForm)
-      setEditingId(null)
-    })
+    startTransition(async () => { await updateProspect(id, editForm); setEditingId(null) })
   }
 
   async function handleConvert(e: React.FormEvent) {
@@ -145,17 +148,14 @@ export default function ProspectionPanel({ prospects }: Props) {
   }
 
   function openConvert(prospect: Prospect) {
-    setConvertForm({
-      email: prospect.email ?? '',
-      full_name: prospect.contact_name ?? '',
-      password: '',
-    })
+    setConvertForm({ email: prospect.email ?? '', full_name: prospect.contact_name ?? '', password: '' })
     setConvertingId(prospect.id)
     setConvertError('')
   }
 
-  // Filter
-  const filtered = prospects.filter(p => {
+  // Filter by channel, status, search
+  const channelProspects = prospects.filter(p => (p.channel ?? 'email') === activeChannel)
+  const filtered = channelProspects.filter(p => {
     const matchStatus = filterStatus === 'all' || p.status === filterStatus
     const q = search.toLowerCase()
     const matchSearch = !q ||
@@ -166,16 +166,37 @@ export default function ProspectionPanel({ prospects }: Props) {
     return matchStatus && matchSearch
   })
 
-  // Stats
   const stats = STATUS_OPTIONS.map(s => ({
-    ...s,
-    count: prospects.filter(p => p.status === s.value).length,
+    ...s, count: channelProspects.filter(p => p.status === s.value).length,
   }))
+
+  const emailCount = prospects.filter(p => (p.channel ?? 'email') === 'email').length
+  const callCount = prospects.filter(p => p.channel === 'cold_call').length
 
   return (
     <div className="space-y-6">
 
-      {/* Génération IA — Placeholder */}
+      {/* Channel tabs */}
+      <div className="flex items-center gap-3">
+        {CHANNELS.map(ch => (
+          <button
+            key={ch.value}
+            onClick={() => { setActiveChannel(ch.value); setFilterStatus('all'); setSearch(''); setShowAdd(false); setEditingId(null) }}
+            className={`flex items-center gap-2.5 px-5 py-3 rounded-xl border text-sm font-medium transition-all cursor-pointer
+              ${activeChannel === ch.value
+                ? 'bg-white text-black border-white'
+                : 'text-[#a1a1aa] border-[#1e1e1e] hover:border-white/20 hover:text-white bg-[#0f0f0f]'}`}
+          >
+            {ch.icon}
+            {ch.label}
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${activeChannel === ch.value ? 'bg-black/10' : 'bg-white/5'}`}>
+              {ch.value === 'email' ? emailCount : callCount}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* AI generation placeholder */}
       <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5 md:p-6">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
@@ -184,41 +205,28 @@ export default function ProspectionPanel({ prospects }: Props) {
           <div className="flex-1">
             <h2 className="text-sm font-semibold text-white mb-1">Recherche automatique</h2>
             <p className="text-xs text-[#a1a1aa] leading-relaxed mb-4">
-              Connectez un workflow n8n pour lancer des recherches automatiques sur LinkedIn, scrapper des sites web ou importer des prospects depuis une source externe.
+              {activeChannel === 'email'
+                ? 'Connectez un workflow n8n pour scrapper des emails et lancer des campagnes de prospection par mail automatiques.'
+                : 'Connectez un workflow n8n pour générer des listes de cold call avec numéros, scripts et notes.'}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-              {[
-                { label: 'Secteur d\'activité', placeholder: 'Ex : E-commerce, SaaS...' },
-                { label: 'Localisation', placeholder: 'Ex : Paris, Lyon...' },
-                { label: 'Taille', placeholder: 'TPE, PME, ETI...' },
-              ].map(({ label, placeholder }) => (
-                <div key={label}>
-                  <label className={labelClass}>{label}</label>
-                  <input type="text" placeholder={placeholder} disabled className={`${inputClass} opacity-40 cursor-not-allowed`} />
-                </div>
-              ))}
-            </div>
             <div className="flex items-center gap-3">
-              <button
-                disabled
-                className="flex items-center gap-2 bg-white/10 text-white/40 text-xs font-semibold px-4 py-2 rounded-lg cursor-not-allowed"
-              >
+              <button disabled className="flex items-center gap-2 bg-white/10 text-white/40 text-xs font-semibold px-4 py-2 rounded-lg cursor-not-allowed">
                 <LinkedInIcon className="w-3.5 h-3.5" />
                 Lancer la recherche
               </button>
-              <span className="text-[10px] text-[#52525b] border border-[#1e1e1e] rounded-full px-3 py-1">
-                Workflow n8n non configuré
-              </span>
+              <span className="text-[10px] text-[#52525b] border border-[#1e1e1e] rounded-full px-3 py-1">Workflow n8n non configuré</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Gestion des prospects */}
+      {/* Prospect list */}
       <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e1e]">
-          <h2 className="text-xs font-semibold text-white uppercase tracking-widest">Prospects</h2>
+          <h2 className="text-xs font-semibold text-white uppercase tracking-widest">
+            {activeChannel === 'email' ? 'Prospects Email' : 'Prospects Cold Call'}
+          </h2>
           <button
             onClick={() => setShowAdd(p => !p)}
             className="flex items-center gap-1.5 text-xs bg-white text-black font-semibold px-4 py-2 rounded-lg hover:bg-white/90 transition-all"
@@ -234,7 +242,7 @@ export default function ProspectionPanel({ prospects }: Props) {
             onClick={() => setFilterStatus('all')}
             className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap transition-colors border-b-2 ${filterStatus === 'all' ? 'border-white text-white' : 'border-transparent text-[#52525b] hover:text-[#a1a1aa]'}`}
           >
-            Tous ({prospects.length})
+            Tous ({channelProspects.length})
           </button>
           {stats.map(s => (
             <button
@@ -250,7 +258,9 @@ export default function ProspectionPanel({ prospects }: Props) {
         {/* Add form */}
         {showAdd && (
           <form onSubmit={handleCreate} className="p-5 border-b border-[#1e1e1e] bg-[#080808]/50">
-            <div className="text-xs font-semibold text-white uppercase tracking-widest mb-4">Ajouter un prospect</div>
+            <div className="text-xs font-semibold text-white uppercase tracking-widest mb-4">
+              Ajouter un prospect {activeChannel === 'email' ? 'email' : 'cold call'}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className={labelClass}>Entreprise *</label>
@@ -297,7 +307,7 @@ export default function ProspectionPanel({ prospects }: Props) {
               </div>
               <div className="sm:col-span-2 lg:col-span-3">
                 <label className={labelClass}>Notes</label>
-                <textarea value={form.notes} onChange={handleFormChange('notes')} placeholder="Contexte, besoins identifiés..." rows={2} className={`${inputClass} resize-none`} />
+                <textarea value={form.notes} onChange={handleFormChange('notes')} placeholder={activeChannel === 'cold_call' ? 'Script d\'appel, contexte...' : 'Contexte, besoins identifiés...'} rows={2} className={`${inputClass} resize-none`} />
               </div>
             </div>
             {formError && <p className="text-xs text-red-400 mb-3">{formError}</p>}
@@ -306,7 +316,7 @@ export default function ProspectionPanel({ prospects }: Props) {
                 <PlusIcon className="w-3.5 h-3.5" />
                 {formLoading ? 'Ajout...' : 'Ajouter'}
               </button>
-              <button type="button" onClick={() => { setShowAdd(false); setForm(EMPTY_FORM) }} className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">
+              <button type="button" onClick={() => { setShowAdd(false); setForm(emptyForm()) }} className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">
                 Annuler
               </button>
             </div>
@@ -329,7 +339,7 @@ export default function ProspectionPanel({ prospects }: Props) {
           </div>
         </div>
 
-        {/* Prospect list */}
+        {/* List */}
         {filtered.length === 0 ? (
           <div className="p-10 text-center">
             <p className="text-[#52525b] text-sm">{search || filterStatus !== 'all' ? 'Aucun résultat.' : 'Aucun prospect. Cliquez sur "Nouveau prospect" pour commencer.'}</p>
@@ -343,14 +353,10 @@ export default function ProspectionPanel({ prospects }: Props) {
 
               return (
                 <div key={prospect.id}>
-                  {/* Main row */}
                   <div className="flex items-center gap-3 md:gap-4 px-5 py-3.5 bg-[#080808]/20">
-                    {/* Company initial */}
                     <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0 text-xs font-semibold text-white">
                       {prospect.company_name.slice(0, 2).toUpperCase()}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-white">{prospect.company_name}</span>
@@ -372,8 +378,6 @@ export default function ProspectionPanel({ prospects }: Props) {
                         <div className="mt-1.5 text-[11px] text-[#52525b] leading-relaxed line-clamp-2">{prospect.notes}</div>
                       )}
                     </div>
-
-                    {/* Status */}
                     <select
                       value={prospect.status}
                       onChange={e => handleStatusChange(prospect, e.target.value as Prospect['status'])}
@@ -384,8 +388,6 @@ export default function ProspectionPanel({ prospects }: Props) {
                         <option key={s.value} value={s.value} className="bg-[#0f0f0f] text-white">{s.label}</option>
                       ))}
                     </select>
-
-                    {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
                       {prospect.linkedin_url && (
                         <a href={prospect.linkedin_url} target="_blank" rel="noopener noreferrer" className="w-7 h-7 flex items-center justify-center rounded-lg text-[#52525b] hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="LinkedIn">
@@ -393,11 +395,7 @@ export default function ProspectionPanel({ prospects }: Props) {
                         </a>
                       )}
                       {prospect.status !== 'converti' && (
-                        <button
-                          onClick={() => openConvert(prospect)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#52525b] hover:text-green-400 hover:bg-green-500/10 transition-all"
-                          title="Convertir en client"
-                        >
+                        <button onClick={() => openConvert(prospect)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#52525b] hover:text-green-400 hover:bg-green-500/10 transition-all" title="Convertir en client">
                           <UserPlusIcon className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -411,11 +409,7 @@ export default function ProspectionPanel({ prospects }: Props) {
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </button>
-                      <button
-                        onClick={() => handleDelete(prospect.id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#52525b] hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        title="Supprimer"
-                      >
+                      <button onClick={() => handleDelete(prospect.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#52525b] hover:text-red-400 hover:bg-red-500/10 transition-all" title="Supprimer">
                         <TrashIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -437,22 +431,12 @@ export default function ProspectionPanel({ prospects }: Props) {
                         ].map(({ key, label, type }) => (
                           <div key={key}>
                             <label className={labelClass}>{label}</label>
-                            <input
-                              type={type}
-                              value={(editForm as Record<string, string>)[key] ?? ''}
-                              onChange={handleEditChange(key)}
-                              className={inputClass}
-                            />
+                            <input type={type} value={(editForm as Record<string, string>)[key] ?? ''} onChange={handleEditChange(key)} className={inputClass} />
                           </div>
                         ))}
                         <div className="sm:col-span-2 lg:col-span-3">
                           <label className={labelClass}>Notes</label>
-                          <textarea
-                            value={(editForm.notes as string) ?? ''}
-                            onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
-                            rows={2}
-                            className={`${inputClass} resize-none`}
-                          />
+                          <textarea value={(editForm.notes as string) ?? ''} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -460,9 +444,7 @@ export default function ProspectionPanel({ prospects }: Props) {
                           <CheckIcon className="w-3.5 h-3.5" />
                           {isPending ? 'Enregistrement...' : 'Enregistrer'}
                         </button>
-                        <button onClick={() => setEditingId(null)} className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">
-                          Annuler
-                        </button>
+                        <button onClick={() => setEditingId(null)} className="text-[#a1a1aa] text-xs px-3 py-2 rounded-lg hover:text-white hover:bg-white/5 transition-all">Annuler</button>
                       </div>
                     </div>
                   )}
@@ -489,7 +471,7 @@ export default function ProspectionPanel({ prospects }: Props) {
                             <input type="password" required minLength={8} value={convertForm.password} onChange={e => setConvertForm(p => ({ ...p, password: e.target.value }))} placeholder="••••••••" className={inputClass} />
                           </div>
                         </div>
-                        <p className="text-[10px] text-[#a1a1aa] mb-3">Un compte client sera créé. Le prospect passera automatiquement en statut "Converti".</p>
+                        <p className="text-[10px] text-[#a1a1aa] mb-3">Un compte client sera créé. Le prospect passera automatiquement en statut &quot;Converti&quot;.</p>
                         {convertError && <p className="text-xs text-red-400 mb-3">{convertError}</p>}
                         <div className="flex items-center gap-2">
                           <button type="submit" disabled={convertLoading} className="flex items-center gap-2 bg-green-500 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-green-400 disabled:opacity-50 transition-all">

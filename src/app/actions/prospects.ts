@@ -25,6 +25,7 @@ export async function createProspect(data: {
   sector?: string
   location?: string
   source?: string
+  channel?: 'email' | 'cold_call'
   notes?: string
 }) {
   const { admin } = await requireAdmin()
