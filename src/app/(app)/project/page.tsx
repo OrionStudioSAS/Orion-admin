@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Script from 'next/script'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon, ExternalLinkIcon, FolderIcon } from '@/components/ui/Icons'
@@ -21,11 +22,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   en_pause: { label: 'En pause', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' },
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  resource: 'Ressources',
-  quote: 'Devis',
-  invoice: 'Factures',
-}
 
 function formatBytes(bytes: number | null): string {
   if (!bytes) return ''
@@ -422,7 +418,7 @@ export default async function ProjectPage() {
             data-width="100%"
             data-height="600"
           />
-          <script src="https://app.iclosed.io/assets/widget.js" async />
+          <Script src="https://app.iclosed.io/assets/widget.js" strategy="lazyOnload" />
         </div>
       </div>
     </div>
