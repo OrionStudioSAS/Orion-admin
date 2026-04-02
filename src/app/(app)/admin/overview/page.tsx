@@ -49,9 +49,11 @@ export default async function OverviewPage() {
       const d = new Date(f.created_at)
       return d.getFullYear() === m.year && d.getMonth() === m.month
     })
+    const ttc = monthInvoices.reduce((sum, f) => sum + (f.amount_ht || 0), 0)
     return {
       label: m.label,
-      amount: monthInvoices.reduce((sum, f) => sum + (f.amount_ht || 0), 0),
+      ttc,
+      ht: Math.round(ttc / 1.20 * 100) / 100,
       count: monthInvoices.length,
     }
   })
@@ -87,7 +89,8 @@ export default async function OverviewPage() {
   const donutData = Object.entries(typeGroups).map(([name, value]) => ({ name, value }))
 
   // Total revenue
-  const totalRevenue = paidInvoices.reduce((s, f) => s + (f.amount_ht || 0), 0)
+  const totalRevenueTTC = paidInvoices.reduce((s, f) => s + (f.amount_ht || 0), 0)
+  const totalRevenueHT = Math.round(totalRevenueTTC / 1.20 * 100) / 100
   const totalInvoices = paidInvoices.length
   const totalProspects = (prospects || []).length
   const conversionRate = totalProspects > 0
@@ -107,8 +110,8 @@ export default async function OverviewPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Revenus (payés)', value: `${(totalRevenue / 1000).toFixed(1)}k€`, color: 'text-white' },
-          { label: 'Factures payées', value: String(totalInvoices), color: 'text-white' },
+          { label: 'Revenus TTC', value: `${(totalRevenueTTC / 1000).toFixed(1)}k€`, color: 'text-white' },
+          { label: 'Revenus HT', value: `${(totalRevenueHT / 1000).toFixed(1)}k€`, color: 'text-white' },
           { label: 'Prospects', value: String(totalProspects), color: 'text-white' },
           { label: 'Taux de conversion', value: `${conversionRate}%`, color: 'text-green-400' },
         ].map(kpi => (

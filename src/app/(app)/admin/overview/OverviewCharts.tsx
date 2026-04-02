@@ -5,7 +5,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 
-interface RevenueItem { label: string; amount: number; count: number }
+interface RevenueItem { label: string; ttc: number; ht: number; count: number }
 interface FunnelItem { label: string; value: number }
 interface DonutItem { name: string; value: number }
 
@@ -35,9 +35,10 @@ function RevenueTooltip({ active, payload, label }: any) {
   const d = payload[0].payload as RevenueItem
   return (
     <div className="bg-[#1e1e1e] border border-white/10 rounded-lg px-3 py-2 text-xs">
-      <div className="text-white font-semibold mb-0.5">{label}</div>
-      <div className="text-[#a1a1aa]">{d.amount.toLocaleString('fr-FR')} € HT</div>
-      <div className="text-[#52525b]">{d.count} facture{d.count > 1 ? 's' : ''}</div>
+      <div className="text-white font-semibold mb-1">{label}</div>
+      <div className="text-white">{d.ttc.toLocaleString('fr-FR')} € TTC</div>
+      <div className="text-[#a1a1aa]">{d.ht.toLocaleString('fr-FR')} € HT</div>
+      <div className="text-[#52525b] mt-0.5">{d.count} facture{d.count > 1 ? 's' : ''}</div>
     </div>
   )
 }
@@ -50,17 +51,28 @@ export default function OverviewCharts({ revenueData, funnelData, donutData }: P
 
       {/* Graphique 1 — Revenus 12 mois */}
       <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-5">
-        <div className="text-sm font-semibold text-white mb-1">Revenus 12 mois</div>
-        <div className="text-[10px] text-[#52525b] uppercase tracking-widest mb-4">Factures payées — montant HT</div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-sm font-semibold text-white">Revenus 12 mois</div>
+          <div className="flex items-center gap-4 text-[10px]">
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-white/80" />TTC</div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-white/25" />HT</div>
+          </div>
+        </div>
+        <div className="text-[10px] text-[#52525b] uppercase tracking-widest mb-4">Factures payées</div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={revenueData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <XAxis dataKey="label" tick={{ fill: '#52525b', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#52525b', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={formatK} width={45} />
               <Tooltip content={<RevenueTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="ttc" radius={[4, 4, 0, 0]}>
                 {revenueData.map((_, i) => (
-                  <Cell key={i} fill={i === currentMonth ? '#C0392B' : '#333333'} />
+                  <Cell key={i} fill={i === currentMonth ? '#C0392B' : '#555555'} />
+                ))}
+              </Bar>
+              <Bar dataKey="ht" radius={[4, 4, 0, 0]}>
+                {revenueData.map((_, i) => (
+                  <Cell key={i} fill={i === currentMonth ? '#C0392B66' : '#333333'} />
                 ))}
               </Bar>
             </BarChart>
@@ -142,7 +154,7 @@ export default function OverviewCharts({ revenueData, funnelData, donutData }: P
                   </Pie>
                   <Tooltip
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    formatter={(value: any) => [`${Number(value).toLocaleString('fr-FR')} € HT`, '']}
+                    formatter={(value: any) => [`${Number(value).toLocaleString('fr-FR')} € TTC`, '']}
                     contentStyle={{ background: '#1e1e1e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12, color: 'white' }}
                     itemStyle={{ color: '#a1a1aa' }}
                   />
