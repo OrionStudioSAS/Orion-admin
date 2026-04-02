@@ -33,16 +33,20 @@ export async function createGmailDraft(params: {
   const gmail = google.gmail({ version: 'v1', auth })
 
   const fromHeader = params.from || process.env.GMAIL_FROM_EMAIL || 'me'
+  // Encode subject with RFC 2047 for accented characters
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(params.subject, 'utf-8').toString('base64')}?=`
   const rawMessage = [
     `From: ${fromHeader}`,
     `To: ${params.to}`,
-    `Subject: ${params.subject}`,
+    `Subject: ${encodedSubject}`,
+    'MIME-Version: 1.0',
     'Content-Type: text/html; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
     '',
-    params.body,
+    Buffer.from(params.body, 'utf-8').toString('base64'),
   ].join('\r\n')
 
-  const encodedMessage = Buffer.from(rawMessage)
+  const encodedMessage = Buffer.from(rawMessage, 'utf-8')
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
