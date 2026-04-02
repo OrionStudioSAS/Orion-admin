@@ -19,6 +19,9 @@ export async function updateClientProfile(profileId: string, data: {
   company?: string | null
   phone?: string | null
   website?: string | null
+  job_title?: string | null
+  linkedin_url?: string | null
+  webflow_site?: string | null
 }) {
   const { admin } = await requireAdmin()
   await admin.from('profiles').update({ ...data, updated_at: new Date().toISOString() }).eq('id', profileId)

@@ -35,6 +35,9 @@ export default function ClientView({ client, project, projectFiles }: Props) {
     company: client.company || '',
     phone: client.phone || '',
     website: client.website || '',
+    job_title: client.job_title || '',
+    linkedin_url: client.linkedin_url || '',
+    webflow_site: client.webflow_site || '',
   })
   const [profileSaved, setProfileSaved] = useState(false)
 
@@ -53,6 +56,9 @@ export default function ClientView({ client, project, projectFiles }: Props) {
         company: profileForm.company || null,
         phone: profileForm.phone || null,
         website: profileForm.website || null,
+        job_title: profileForm.job_title || null,
+        linkedin_url: profileForm.linkedin_url || null,
+        webflow_site: profileForm.webflow_site || null,
       })
       setProfileSaved(true)
     })
@@ -105,7 +111,19 @@ export default function ClientView({ client, project, projectFiles }: Props) {
             <label className={labelClass}>Site web</label>
             <input type="url" value={profileForm.website} onChange={handleProfileChange('website')} placeholder="https://..." className={inputClass} />
           </div>
-          <div className="sm:col-span-2">
+          <div>
+            <label className={labelClass}>Métier</label>
+            <input type="text" value={profileForm.job_title} onChange={handleProfileChange('job_title')} placeholder="Développeur, Designer..." className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>LinkedIn</label>
+            <input type="url" value={profileForm.linkedin_url} onChange={handleProfileChange('linkedin_url')} placeholder="https://linkedin.com/in/..." className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Site Webflow</label>
+            <input type="text" value={profileForm.webflow_site} onChange={handleProfileChange('webflow_site')} placeholder="mon-site.webflow.io" className={inputClass} />
+          </div>
+          <div>
             <label className={labelClass}>Email (non modifiable)</label>
             <input type="email" value={client.email} disabled className={`${inputClass} opacity-40 cursor-not-allowed`} />
           </div>
