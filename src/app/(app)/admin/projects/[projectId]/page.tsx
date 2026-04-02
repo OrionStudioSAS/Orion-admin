@@ -2,7 +2,6 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isWhatsAppConfigured } from '@/lib/whatsapp'
 import { StepMessage } from '@/types/database'
 import ProjectManager from '../../users/[profileId]/ProjectManager'
 import StepsManager from '../../users/[profileId]/StepsManager'
@@ -57,8 +56,6 @@ export default async function AdminProjectEditPage({ params }: Props) {
     stepMessagesMap[msg.step_id].push(msg)
   }
 
-  const whatsappConfigured = isWhatsAppConfigured()
-  const hasPhone = !!targetProfile?.phone
   const status = project.status ? STATUS_LABELS[project.status] : null
 
   const allAdmins = adminsRes.data || []
@@ -152,8 +149,6 @@ export default async function AdminProjectEditPage({ params }: Props) {
         profileId={profileId}
         project={project}
         files={files}
-        whatsappConfigured={whatsappConfigured}
-        hasPhone={hasPhone}
       />
     </div>
   )

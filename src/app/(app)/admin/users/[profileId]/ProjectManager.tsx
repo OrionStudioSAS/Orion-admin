@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { updateProjectById, deleteProjectFile, uploadProjectFile, sendProjectNotification, toggleFileVisibility, addProjectLink, getDownloadUrl, updateFileInvoice } from '@/app/actions/projects'
+import { updateProjectById, deleteProjectFile, uploadProjectFile, toggleFileVisibility, addProjectLink, getDownloadUrl, updateFileInvoice } from '@/app/actions/projects'
 import { Project, ProjectFile } from '@/types/database'
-import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, BellIcon, SendIcon, EyeIcon, EyeOffIcon, LinkIcon } from '@/components/ui/Icons'
+import { CheckIcon, TrashIcon, UploadIcon, PlusIcon, EyeIcon, EyeOffIcon, LinkIcon } from '@/components/ui/Icons'
 
 const PLAN_OPTIONS = [
   { value: '', label: 'Non défini' },
@@ -38,23 +38,15 @@ function formatBytes(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const PRESET_MESSAGES = [
-  { label: 'Espace mis à jour', text: '👋 Bonjour, votre espace Orion Studio a été mis à jour. Connectez-vous pour voir les dernières nouveautés !' },
-  { label: 'Projet démarré', text: '🚀 Votre projet vient de démarrer ! Connectez-vous à votre espace pour suivre son avancement.' },
-  { label: 'Action requise', text: '👋 Une action est requise de votre part sur votre projet. Connectez-vous dès que possible pour en savoir plus.' },
-  { label: 'Projet terminé', text: '🎉 Bonne nouvelle ! Votre projet est terminé. Connectez-vous pour le découvrir.' },
-]
 
 interface Props {
   projectId: string
   profileId: string
   project: Project
   files: ProjectFile[]
-  whatsappConfigured: boolean
-  hasPhone: boolean
 }
 
-export default function ProjectManager({ projectId, profileId, project, files, whatsappConfigured, hasPhone }: Props) {
+export default function ProjectManager({ projectId, profileId, project, files }: Props) {
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({
@@ -86,12 +78,6 @@ export default function ProjectManager({ projectId, profileId, project, files, w
   const [linkForm, setLinkForm] = useState({ name: '', url: '', visible: true })
   const [linkLoading, setLinkLoading] = useState(false)
   const [linkError, setLinkError] = useState('')
-
-  // WhatsApp state
-  const [waMessage, setWaMessage] = useState('')
-  const [waSending, setWaSending] = useState(false)
-  const [waStatus, setWaStatus] = useState<'idle' | 'sent' | 'error'>('idle')
-  const [waError, setWaError] = useState('')
 
   function handleChange(key: string) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -190,23 +176,6 @@ export default function ProjectManager({ projectId, profileId, project, files, w
     setLinkLoading(false)
   }
 
-  async function handleWaSend() {
-    if (!waMessage.trim() || waSending) return
-    setWaSending(true)
-    setWaStatus('idle')
-    setWaError('')
-    try {
-      await sendProjectNotification(profileId, waMessage.trim())
-      setWaStatus('sent')
-      setWaMessage('')
-      setTimeout(() => setWaStatus('idle'), 3000)
-    } catch (err) {
-      setWaStatus('error')
-      setWaError(err instanceof Error ? err.message : 'Erreur envoi')
-    }
-    setWaSending(false)
-  }
-
   function handleDelete(fileId: string, storagePath: string | null) {
     if (!confirm('Supprimer ce fichier définitivement ?')) return
     startTransition(async () => {
@@ -288,82 +257,6 @@ export default function ProjectManager({ projectId, profileId, project, files, w
           {isPending ? 'Enregistrement...' : saved ? 'Enregistré !' : 'Enregistrer'}
         </button>
       </form>
-
-      {/* WhatsApp notifications */}
-      <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4 md:p-6">
-        <div className="flex items-center gap-2.5 mb-1">
-          <BellIcon className="w-4 h-4 text-[#a1a1aa]" />
-          <h2 className="text-xs font-semibold text-white uppercase tracking-widest">Notification WhatsApp</h2>
-        </div>
-
-        {/* Status indicator */}
-        <div className="flex items-center gap-2 mb-4 mt-2">
-          {!whatsappConfigured ? (
-            <span className="text-[10px] text-yellow-500 border border-yellow-500/20 bg-yellow-500/5 rounded-full px-2.5 py-1">
-              ⚠️ Twilio non configuré (variables manquantes)
-            </span>
-          ) : !hasPhone ? (
-            <span className="text-[10px] text-[#a1a1aa] border border-[#1e1e1e] rounded-full px-2.5 py-1">
-              📵 Aucun numéro de téléphone pour cet utilisateur
-            </span>
-          ) : (
-            <span className="text-[10px] text-green-400 border border-green-500/20 bg-green-500/5 rounded-full px-2.5 py-1">
-              ✓ Prêt — les messages automatiques sont actifs
-            </span>
-          )}
-        </div>
-
-        {/* Preset messages */}
-        <div className="mb-4">
-          <div className={labelClass}>Messages rapides</div>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_MESSAGES.map(p => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => setWaMessage(p.text)}
-                disabled={!whatsappConfigured || !hasPhone}
-                className="text-[10px] text-[#a1a1aa] hover:text-white border border-[#1e1e1e] hover:border-white/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom message */}
-        <div className="flex items-end gap-2">
-          <textarea
-            value={waMessage}
-            onChange={e => { setWaMessage(e.target.value); setWaStatus('idle') }}
-            placeholder="Ou tapez un message personnalisé..."
-            rows={3}
-            disabled={!whatsappConfigured || !hasPhone}
-            className={`flex-1 ${inputClass} resize-none disabled:opacity-40`}
-          />
-          <button
-            type="button"
-            onClick={handleWaSend}
-            disabled={!whatsappConfigured || !hasPhone || !waMessage.trim() || waSending}
-            className="h-[88px] w-10 flex items-center justify-center bg-white text-black rounded-xl hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer"
-          >
-            {waSending ? (
-              <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-            ) : (
-              <SendIcon className="w-3.5 h-3.5" />
-            )}
-          </button>
-        </div>
-
-        {waStatus === 'sent' && (
-          <p className="text-xs text-green-400 mt-2 flex items-center gap-1.5">
-            <CheckIcon className="w-3 h-3" /> Message envoyé avec succès
-          </p>
-        )}
-        {waStatus === 'error' && (
-          <p className="text-xs text-red-400 mt-2">{waError}</p>
-        )}
-      </div>
 
       {/* Sections fichiers */}
       {CATEGORIES.map(({ key, label, desc }) => {

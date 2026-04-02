@@ -43,7 +43,6 @@
 - Profil: `src/app/(app)/profile/ProfileForm.tsx`
 
 ### Intégrations
-- WhatsApp/Twilio: `src/lib/whatsapp.ts`
 - Gmail API (brouillons): `src/lib/gmail.ts` (OAuth2, createGmailDraft)
 - Claude/Anthropic (génération mails): `src/lib/anthropic.ts` (generateProspectionEmail)
 - API routes Gmail OAuth: `src/app/api/gmail/auth/` et `callback/`
@@ -72,4 +71,3 @@
 - GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, GMAIL_REDIRECT_URI, GMAIL_FROM_EMAIL
 - ANTHROPIC_API_KEY
 - PROSPECTION_SENDER_NAME, PROSPECTION_SENDER_COMPANY, PROSPECTION_SENDER_TITLE
-- TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER

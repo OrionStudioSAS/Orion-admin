@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Project } from '@/types/database'
-import { sendWhatsAppMessage, notifNewFile, notifStatusChange } from '@/lib/whatsapp'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -46,17 +45,6 @@ export async function updateProjectById(projectId: string, profileId: string, da
 
   await admin.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', projectId)
 
-  if (data.status && data.status !== prevStatus) {
-    const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
-    if (profile?.phone) {
-      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
-      const msg = notifStatusChange(firstName, data.status)
-      sendWhatsAppMessage(profile.phone, msg).catch((err) => {
-        console.error('[WhatsApp] Erreur envoi notification:', err)
-      })
-    }
-  }
-
   revalidateProjectPaths(projectId, profileId)
 }
 
@@ -71,17 +59,6 @@ export async function upsertProject(profileId: string, data: Partial<Project>) {
     await admin.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', existing.id)
   } else {
     await admin.from('projects').insert({ profile_id: profileId, ...data })
-  }
-
-  if (data.status && data.status !== prevStatus) {
-    const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
-    if (profile?.phone) {
-      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
-      const msg = notifStatusChange(firstName, data.status)
-      sendWhatsAppMessage(profile.phone, msg).catch((err) => {
-        console.error('[WhatsApp] Erreur envoi notification:', err)
-      })
-    }
   }
 
   revalidatePath('/admin/projects')
@@ -152,14 +129,6 @@ export async function uploadProjectFile(formData: FormData) {
 
   if (dbError) throw new Error(dbError.message)
 
-  // Send WhatsApp notification for new file (only if visible to client)
-  const { data: profile } = await admin.from('profiles').select('phone, full_name').eq('id', profileId).single()
-  if (profile?.phone && visibleToClient) {
-    const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
-    const msg = notifNewFile(firstName, name, category)
-    sendWhatsAppMessage(profile.phone, msg).catch(() => {})
-  }
-
   revalidateProjectPaths(projectId, profileId)
 }
 
@@ -201,14 +170,6 @@ export async function updateFileInvoice(fileId: string, data: { amount_ht?: numb
   revalidatePath(`/admin/users/${profileId}`)
   revalidatePath('/project')
   revalidatePath('/admin/overview')
-}
-
-export async function sendProjectNotification(profileId: string, message: string) {
-  await requireAdmin()
-  const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('phone').eq('id', profileId).single()
-  if (!profile?.phone) throw new Error('Aucun numéro de téléphone configuré pour cet utilisateur')
-  await sendWhatsAppMessage(profile.phone, message)
 }
 
 export async function createStep(projectId: string, profileId: string, data: { title: string; description?: string; start_date?: string; end_date?: string }) {
