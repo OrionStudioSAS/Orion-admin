@@ -35,12 +35,13 @@ export default async function AdminProjectEditPage({ params }: Props) {
 
   const profileId = project.profile_id
 
-  const [profileRes, filesRes, stepsRes, msgsRes, adminsRes, teamRes, allAppsRes, projectAppsRes] = await Promise.all([
+  const [profileRes, filesRes, stepsRes, msgsRes, adminsRes, allUsersRes, teamRes, allAppsRes, projectAppsRes] = await Promise.all([
     admin.from('profiles').select('*').eq('id', profileId).single(),
     admin.from('project_files').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
     admin.from('project_steps').select('*').eq('project_id', projectId).order('position', { ascending: true }),
     admin.from('step_messages').select('*').eq('project_id', projectId).order('created_at', { ascending: true }),
     admin.from('profiles').select('*').eq('role', 'admin').order('full_name'),
+    admin.from('profiles').select('*').order('full_name'),
     admin.from('project_team_members').select('*, profile:profiles(*)').eq('project_id', projectId),
     admin.from('apps').select('*').order('name'),
     admin.from('project_apps').select('app_id').eq('project_id', projectId),
@@ -61,6 +62,7 @@ export default async function AdminProjectEditPage({ params }: Props) {
   const status = project.status ? STATUS_LABELS[project.status] : null
 
   const allAdmins = adminsRes.data || []
+  const allUsers = allUsersRes.data || []
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const teamMembers = (teamRes.data || []).map((m: any) => ({ ...m, profile: m.profile as any }))
   const allApps = allAppsRes.data || []
@@ -129,6 +131,7 @@ export default async function AdminProjectEditPage({ params }: Props) {
           projectId={projectId}
           profileId={profileId}
           admins={allAdmins}
+          allUsers={allUsers}
           teamMembers={teamMembers}
         />
       </div>

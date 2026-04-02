@@ -38,6 +38,8 @@ export default function ClientView({ client, project, projectFiles }: Props) {
     job_title: client.job_title || '',
     linkedin_url: client.linkedin_url || '',
     webflow_site: client.webflow_site || '',
+    company_address: client.company_address || '',
+    siret: client.siret || '',
   })
   const [profileSaved, setProfileSaved] = useState(false)
 
@@ -59,6 +61,8 @@ export default function ClientView({ client, project, projectFiles }: Props) {
         job_title: profileForm.job_title || null,
         linkedin_url: profileForm.linkedin_url || null,
         webflow_site: profileForm.webflow_site || null,
+        company_address: profileForm.company_address || null,
+        siret: profileForm.siret || null,
       })
       setProfileSaved(true)
     })
@@ -122,6 +126,14 @@ export default function ClientView({ client, project, projectFiles }: Props) {
           <div>
             <label className={labelClass}>Site Webflow</label>
             <input type="text" value={profileForm.webflow_site} onChange={handleProfileChange('webflow_site')} placeholder="mon-site.webflow.io" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>SIRET</label>
+            <input type="text" value={profileForm.siret} onChange={handleProfileChange('siret')} placeholder="123 456 789 00012" className={inputClass} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Adresse de l&apos;entreprise</label>
+            <input type="text" value={profileForm.company_address} onChange={handleProfileChange('company_address')} placeholder="12 rue de la Paix, 75002 Paris" className={inputClass} />
           </div>
           <div>
             <label className={labelClass}>Email (non modifiable)</label>

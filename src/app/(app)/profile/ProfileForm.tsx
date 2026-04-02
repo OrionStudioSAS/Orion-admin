@@ -52,6 +52,8 @@ export default function ProfileForm({ profile }: Props) {
     job_title: profile.job_title || '',
     linkedin_url: profile.linkedin_url || '',
     company: profile.company || '',
+    company_address: profile.company_address || '',
+    siret: profile.siret || '',
     website: profile.website || '',
     webflow_site: profile.webflow_site || '',
     phone: profile.phone || '',
@@ -190,13 +192,33 @@ export default function ProfileForm({ profile }: Props) {
       <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4 md:p-6">
         <h2 className="text-xs font-semibold text-white uppercase tracking-widest mb-5">Entreprise</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
+          <div>
             <label className={labelClass}>Société</label>
             <input
               type="text"
               value={form.company}
               onChange={handleChange('company')}
               placeholder="Acme Inc."
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>SIRET</label>
+            <input
+              type="text"
+              value={form.siret}
+              onChange={handleChange('siret')}
+              placeholder="123 456 789 00012"
+              className={inputClass}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Adresse de l&apos;entreprise</label>
+            <input
+              type="text"
+              value={form.company_address}
+              onChange={handleChange('company_address')}
+              placeholder="12 rue de la Paix, 75002 Paris"
               className={inputClass}
             />
           </div>

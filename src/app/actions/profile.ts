@@ -12,6 +12,8 @@ export async function updateProfile(data: {
   phone?: string
   job_title?: string
   linkedin_url?: string
+  company_address?: string
+  siret?: string
   avatar_url?: string | null
 }) {
   const supabase = await createClient()

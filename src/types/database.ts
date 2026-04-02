@@ -16,6 +16,8 @@ export interface Database {
           avatar_url: string | null
           job_title: string | null
           linkedin_url: string | null
+          company_address: string | null
+          siret: string | null
           created_at: string
           updated_at: string
         }
@@ -31,6 +33,8 @@ export interface Database {
           avatar_url?: string | null
           job_title?: string | null
           linkedin_url?: string | null
+          company_address?: string | null
+          siret?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +50,8 @@ export interface Database {
           avatar_url?: string | null
           job_title?: string | null
           linkedin_url?: string | null
+          company_address?: string | null
+          siret?: string | null
           updated_at?: string
         }
         Relationships: []
