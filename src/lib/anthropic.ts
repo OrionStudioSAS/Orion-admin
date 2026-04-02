@@ -61,7 +61,9 @@ L'email doit être plus court que le premier, rappeler brièvement notre proposi
     system: systemPrompt,
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  let text = response.content[0].type === 'text' ? response.content[0].text : ''
+  // Strip markdown code fences if present
+  text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
   const json = JSON.parse(text)
   return { subject: json.subject, body: json.body }
 }
