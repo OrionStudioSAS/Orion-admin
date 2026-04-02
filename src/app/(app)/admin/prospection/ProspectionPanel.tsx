@@ -161,7 +161,11 @@ export default function ProspectionPanel({ prospects }: Props) {
     setEmailResult(null)
     try {
       const result = await generateProspectEmail(prospect.id, type)
-      setEmailResult({ id: prospect.id, subject: result.subject, type: type === 'first_contact' ? 'Premier contact' : 'Relance' })
+      if (!result.success) {
+        alert(result.error)
+      } else {
+        setEmailResult({ id: prospect.id, subject: result.subject, type: type === 'first_contact' ? 'Premier contact' : 'Relance' })
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Erreur lors de la génération')
     }

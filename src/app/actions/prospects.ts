@@ -52,44 +52,51 @@ export async function convertProspect(prospectId: string) {
   revalidatePath('/admin/prospection')
 }
 
-export async function generateProspectEmail(prospectId: string, type: 'first_contact' | 'follow_up') {
-  const { admin } = await requireAdmin()
+export async function generateProspectEmail(prospectId: string, type: 'first_contact' | 'follow_up'): Promise<{ success: true; draftId: string; subject: string } | { success: false; error: string }> {
+  try {
+    const { admin } = await requireAdmin()
 
-  const { data: prospect } = await admin.from('prospects').select('*').eq('id', prospectId).single()
-  if (!prospect) throw new Error('Prospect introuvable')
-  if (!prospect.email) throw new Error('Ce prospect n\'a pas d\'adresse email')
+    const { data: prospect } = await admin.from('prospects').select('*').eq('id', prospectId).single()
+    if (!prospect) return { success: false, error: 'Prospect introuvable' }
+    if (!prospect.email) return { success: false, error: "Ce prospect n'a pas d'adresse email" }
 
-  const { isGmailConfigured } = await import('@/lib/gmail')
-  if (!isGmailConfigured()) throw new Error('Gmail non configuré. Ajoutez les variables GMAIL_* dans .env.local')
+    const { isGmailConfigured } = await import('@/lib/gmail')
+    if (!isGmailConfigured()) return { success: false, error: 'Gmail non configuré. Ajoutez GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET et GMAIL_REFRESH_TOKEN dans Vercel.' }
 
-  const { generateProspectionEmail } = await import('@/lib/anthropic')
-  const { subject, body } = await generateProspectionEmail({
-    company_name: prospect.company_name,
-    contact_name: prospect.contact_name,
-    email: prospect.email,
-    sector: prospect.sector,
-    notes: prospect.notes,
-    website: prospect.website,
-  }, type)
+    if (!process.env.ANTHROPIC_API_KEY) return { success: false, error: 'ANTHROPIC_API_KEY non configurée dans Vercel.' }
 
-  const { createGmailDraft } = await import('@/lib/gmail')
-  const draft = await createGmailDraft({
-    to: prospect.email,
-    subject,
-    body,
-  })
+    const { generateProspectionEmail } = await import('@/lib/anthropic')
+    const { subject, body } = await generateProspectionEmail({
+      company_name: prospect.company_name,
+      contact_name: prospect.contact_name,
+      email: prospect.email,
+      sector: prospect.sector,
+      notes: prospect.notes,
+      website: prospect.website,
+    }, type)
 
-  // Update prospect status
-  const newStatus = type === 'first_contact' ? 'contacte' : 'relance'
-  await admin.from('prospects').update({
-    status: newStatus,
-    updated_at: new Date().toISOString(),
-  }).eq('id', prospectId)
+    const { createGmailDraft } = await import('@/lib/gmail')
+    const draft = await createGmailDraft({
+      to: prospect.email,
+      subject,
+      body,
+    })
 
-  revalidatePath('/admin/prospection')
-  revalidatePath('/admin/overview')
+    // Update prospect status
+    const newStatus = type === 'first_contact' ? 'contacte' : 'relance'
+    await admin.from('prospects').update({
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    }).eq('id', prospectId)
 
-  return { draftId: draft.draftId, subject }
+    revalidatePath('/admin/prospection')
+    revalidatePath('/admin/overview')
+
+    return { success: true, draftId: draft.draftId, subject }
+  } catch (err) {
+    console.error('[generateProspectEmail]', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inconnue lors de la génération' }
+  }
 }
 
 export async function autoExpireProspects() {
