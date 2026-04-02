@@ -108,10 +108,13 @@ export default async function OverviewPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4">
+          <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Revenus</div>
+          <div className="text-2xl font-semibold text-white">{(totalRevenueTTC / 1000).toFixed(1)}k€ <span className="text-sm font-medium text-[#a1a1aa]">TTC</span></div>
+          <div className="text-sm font-semibold text-[#a1a1aa] mt-1">{(totalRevenueHT / 1000).toFixed(1)}k€ <span className="text-xs font-medium text-[#52525b]">HT</span></div>
+        </div>
         {[
-          { label: 'Revenus TTC', value: `${(totalRevenueTTC / 1000).toFixed(1)}k€`, color: 'text-white' },
-          { label: 'Revenus HT', value: `${(totalRevenueHT / 1000).toFixed(1)}k€`, color: 'text-white' },
           { label: 'Prospects', value: String(totalProspects), color: 'text-white' },
           { label: 'Taux de conversion', value: `${conversionRate}%`, color: 'text-green-400' },
         ].map(kpi => (
