@@ -27,7 +27,7 @@ export default async function OverviewPage() {
   // Fetch prospects for funnel
   const { data: prospects } = await admin
     .from('prospects')
-    .select('id, status')
+    .select('id, status, channel')
 
   // Build revenue data: paid invoices by month (last 12 months)
   const now = new Date()
@@ -93,8 +93,12 @@ export default async function OverviewPage() {
   const totalRevenueHT = Math.round(totalRevenueTTC / 1.20 * 100) / 100
   const totalInvoices = paidInvoices.length
   const totalProspects = (prospects || []).length
+  const allP = prospects || []
+  const emailToContact = allP.filter(p => (p.channel === 'email' || !p.channel) && p.status === 'nouveau').length
+  const coldCallToContact = allP.filter(p => p.channel === 'cold_call' && p.status === 'nouveau').length
+  const convertedCount = allP.filter(p => p.status === 'converti').length
   const conversionRate = totalProspects > 0
-    ? Math.round((prospects || []).filter(p => p.status === 'converti').length / totalProspects * 100)
+    ? Math.round(convertedCount / totalProspects * 100)
     : 0
 
   return (
@@ -114,15 +118,29 @@ export default async function OverviewPage() {
           <div className="text-2xl font-semibold text-white">{(totalRevenueTTC / 1000).toFixed(1)}k€ <span className="text-sm font-medium text-[#a1a1aa]">TTC</span></div>
           <div className="text-sm font-semibold text-[#a1a1aa] mt-1">{(totalRevenueHT / 1000).toFixed(1)}k€ <span className="text-xs font-medium text-[#52525b]">HT</span></div>
         </div>
-        {[
-          { label: 'Prospects', value: String(totalProspects), color: 'text-white' },
-          { label: 'Taux de conversion', value: `${conversionRate}%`, color: 'text-green-400' },
-        ].map(kpi => (
-          <div key={kpi.label} className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4">
-            <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">{kpi.label}</div>
-            <div className={`text-2xl font-semibold ${kpi.color}`}>{kpi.value}</div>
+        <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4">
+          <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Prospection</div>
+          <div className="flex items-baseline gap-3">
+            <div className="text-2xl font-semibold text-white">{totalProspects}</div>
+            <span className="text-[10px] text-[#52525b]">total</span>
           </div>
-        ))}
+          <div className="flex items-center gap-3 mt-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              <span className="text-xs text-[#a1a1aa]">{emailToContact} email{emailToContact > 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+              <span className="text-xs text-[#a1a1aa]">{coldCallToContact} cold call{coldCallToContact > 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div className="text-[10px] text-[#52525b] mt-1">à contacter</div>
+        </div>
+        <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-4">
+          <div className="text-[10px] text-[#a1a1aa] uppercase tracking-widest mb-2">Conversion</div>
+          <div className="text-2xl font-semibold text-green-400">{conversionRate}%</div>
+          <div className="text-sm text-[#a1a1aa] mt-1">{convertedCount} converti{convertedCount > 1 ? 's' : ''} <span className="text-[#52525b]">/ {totalProspects}</span></div>
+        </div>
       </div>
 
       <OverviewCharts
