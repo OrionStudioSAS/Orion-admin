@@ -542,7 +542,7 @@ export default function ProjectManager({ projectId, profileId, project, files, w
                         <div className="flex items-center gap-2 mt-1">
                           <input
                             type="number"
-                            placeholder="Montant HT (€)"
+                            placeholder="Montant TTC (€)"
                             defaultValue={file.amount_ht ?? ''}
                             onBlur={e => {
                               const val = e.target.value ? parseFloat(e.target.value) : null
