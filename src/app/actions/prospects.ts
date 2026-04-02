@@ -51,3 +51,58 @@ export async function convertProspect(prospectId: string) {
   await admin.from('prospects').update({ status: 'converti', updated_at: new Date().toISOString() }).eq('id', prospectId)
   revalidatePath('/admin/prospection')
 }
+
+export async function generateProspectEmail(prospectId: string, type: 'first_contact' | 'follow_up') {
+  const { admin } = await requireAdmin()
+
+  const { data: prospect } = await admin.from('prospects').select('*').eq('id', prospectId).single()
+  if (!prospect) throw new Error('Prospect introuvable')
+  if (!prospect.email) throw new Error('Ce prospect n\'a pas d\'adresse email')
+
+  const { isGmailConfigured } = await import('@/lib/gmail')
+  if (!isGmailConfigured()) throw new Error('Gmail non configuré. Ajoutez les variables GMAIL_* dans .env.local')
+
+  const { generateProspectionEmail } = await import('@/lib/anthropic')
+  const { subject, body } = await generateProspectionEmail({
+    company_name: prospect.company_name,
+    contact_name: prospect.contact_name,
+    email: prospect.email,
+    sector: prospect.sector,
+    notes: prospect.notes,
+    website: prospect.website,
+  }, type)
+
+  const { createGmailDraft } = await import('@/lib/gmail')
+  const draft = await createGmailDraft({
+    to: prospect.email,
+    subject,
+    body,
+  })
+
+  // Update prospect status
+  const newStatus = type === 'first_contact' ? 'contacte' : 'relance'
+  await admin.from('prospects').update({
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+  }).eq('id', prospectId)
+
+  revalidatePath('/admin/prospection')
+  revalidatePath('/admin/overview')
+
+  return { draftId: draft.draftId, subject }
+}
+
+export async function autoExpireProspects() {
+  const { admin } = await requireAdmin()
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Prospects "relancé" since more than 1 week → "perdu"
+  await admin
+    .from('prospects')
+    .update({ status: 'perdu', updated_at: new Date().toISOString() })
+    .eq('status', 'relance')
+    .lt('updated_at', oneWeekAgo)
+
+  revalidatePath('/admin/prospection')
+  revalidatePath('/admin/overview')
+}

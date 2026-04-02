@@ -27,7 +27,7 @@ export default async function OverviewPage() {
   // Fetch prospects for funnel
   const { data: prospects } = await admin
     .from('prospects')
-    .select('id, status, channel')
+    .select('id, status, channel, company_name, contact_name, email, updated_at')
 
   // Build revenue data: paid invoices by month (last 12 months)
   const now = new Date()
@@ -58,16 +58,25 @@ export default async function OverviewPage() {
     }
   })
 
+  // Auto-expire: prospects "relancé" > 1 week → "perdu"
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  await admin
+    .from('prospects')
+    .update({ status: 'perdu', updated_at: new Date().toISOString() })
+    .eq('status', 'relance')
+    .lt('updated_at', oneWeekAgo)
+
   // Build funnel data
   const allProspects = (prospects || []).filter(p => p.status !== 'perdu')
-  const statusOrder = ['nouveau', 'contacte', 'en_discussion', 'rdv_pris', 'converti']
+  const statusOrder = ['nouveau', 'contacte', 'relance', 'en_discussion', 'rdv_pris', 'converti']
   const atLeast = (status: string) => {
     const idx = statusOrder.indexOf(status)
     return allProspects.filter(p => statusOrder.indexOf(p.status) >= idx).length
   }
   const funnelData = [
     { label: 'Prospects', value: allProspects.length },
-    { label: 'Appelés', value: atLeast('contacte') },
+    { label: 'Contactés', value: atLeast('contacte') },
+    { label: 'Relancés', value: allProspects.filter(p => p.status === 'relance').length },
     { label: 'Intéressés', value: atLeast('en_discussion') },
     { label: 'RDV pris', value: atLeast('rdv_pris') },
     { label: 'Clients', value: atLeast('converti') },
@@ -100,6 +109,11 @@ export default async function OverviewPage() {
   const conversionRate = totalProspects > 0
     ? Math.round(convertedCount / totalProspects * 100)
     : 0
+
+  // Prospects needing attention: contacté > 1 week
+  const staleContacted = allP.filter(p =>
+    p.status === 'contacte' && p.updated_at < oneWeekAgo
+  )
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
@@ -142,6 +156,37 @@ export default async function OverviewPage() {
           <div className="text-sm text-[#a1a1aa] mt-1">{convertedCount} converti{convertedCount > 1 ? 's' : ''} <span className="text-[#52525b]">/ {totalProspects}</span></div>
         </div>
       </div>
+
+      {/* Alerts: prospects needing follow-up */}
+      {staleContacted.length > 0 && (
+        <div className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round"/></svg>
+            <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">À relancer</span>
+            <span className="text-[10px] text-orange-400/60 bg-orange-500/10 px-2 py-0.5 rounded-full">{staleContacted.length} prospect{staleContacted.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-2">
+            {staleContacted.map(p => {
+              const daysSince = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24))
+              return (
+                <div key={p.id} className="flex items-center justify-between gap-3 bg-[#0f0f0f] rounded-xl px-4 py-2.5 border border-[#1e1e1e]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm font-medium text-white">{p.company_name}</span>
+                    {p.contact_name && <span className="text-xs text-[#a1a1aa]">{p.contact_name}</span>}
+                    {p.email && <span className="text-xs text-[#52525b]">{p.email}</span>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-orange-400">Contacté il y a {daysSince} jour{daysSince > 1 ? 's' : ''}</span>
+                    <a href="/admin/prospection" className="text-[10px] font-semibold text-cyan-400 border border-cyan-500/20 px-2.5 py-1 rounded-lg hover:bg-cyan-500/10 transition-all">
+                      Relancer →
+                    </a>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <OverviewCharts
         revenueData={revenueData}

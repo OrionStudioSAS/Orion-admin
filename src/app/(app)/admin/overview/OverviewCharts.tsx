@@ -97,6 +97,7 @@ export default function OverviewCharts({ revenueData, funnelData, donutData }: P
               const colors = [
                 'bg-white/10',
                 'bg-blue-500/20',
+                'bg-cyan-500/20',
                 'bg-purple-500/20',
                 'bg-orange-500/20',
                 'bg-green-500/20',
