@@ -4,6 +4,98 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon } from '@/components/ui/Icons'
 import OverviewCharts from './OverviewCharts'
 
+interface TrackingProspect { id: string; company_name: string; contact_name: string | null; updated_at: string }
+interface TrackingData { recentlyContacted: TrackingProspect[]; toFollowUp: TrackingProspect[]; relanced: TrackingProspect[] }
+
+function ProspectTrackingGrid({ data }: { data: TrackingData }) {
+  const { recentlyContacted, toFollowUp, relanced } = data
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Contacté */}
+      <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-400" />
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Contacté</span>
+          </div>
+          <span className="text-[10px] text-[#52525b] bg-white/5 px-2 py-0.5 rounded-full">{recentlyContacted.length}</span>
+        </div>
+        <div className="p-3 space-y-1.5 max-h-52 overflow-y-auto">
+          {recentlyContacted.length === 0 ? (
+            <p className="text-[10px] text-[#52525b] text-center py-4">Aucun prospect</p>
+          ) : recentlyContacted.map(p => {
+            const d = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 86400000)
+            return (
+              <div key={p.id} className="px-3 py-2 rounded-xl bg-[#080808] border border-[#1e1e1e]">
+                <div className="text-xs font-medium text-white">{p.company_name}</div>
+                {p.contact_name && <div className="text-[10px] text-[#a1a1aa]">{p.contact_name}</div>}
+                <div className="text-[10px] text-[#52525b] mt-0.5">il y a {d} jour{d > 1 ? 's' : ''}</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* À relancer */}
+      <div className="bg-[#0f0f0f] border border-orange-500/20 rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-orange-500/20 flex items-center justify-between bg-orange-500/5">
+          <div className="flex items-center gap-2">
+            <svg className="w-3.5 h-3.5 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round"/></svg>
+            <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">À relancer</span>
+          </div>
+          <span className="text-[10px] text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">{toFollowUp.length}</span>
+        </div>
+        <div className="p-3 space-y-1.5 max-h-52 overflow-y-auto">
+          {toFollowUp.length === 0 ? (
+            <p className="text-[10px] text-[#52525b] text-center py-4">Aucun prospect</p>
+          ) : toFollowUp.map(p => {
+            const d = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 86400000)
+            return (
+              <div key={p.id} className="px-3 py-2 rounded-xl bg-[#080808] border border-orange-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium text-white">{p.company_name}</div>
+                  <a href="/admin/prospection" className="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">Relancer →</a>
+                </div>
+                {p.contact_name && <div className="text-[10px] text-[#a1a1aa]">{p.contact_name}</div>}
+                <div className="text-[10px] text-orange-400 mt-0.5">{d} jour{d > 1 ? 's' : ''} sans réponse</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Relancé */}
+      <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Relancé</span>
+          </div>
+          <span className="text-[10px] text-[#52525b] bg-white/5 px-2 py-0.5 rounded-full">{relanced.length}</span>
+        </div>
+        <div className="p-3 space-y-1.5 max-h-52 overflow-y-auto">
+          {relanced.length === 0 ? (
+            <p className="text-[10px] text-[#52525b] text-center py-4">Aucun prospect</p>
+          ) : relanced.map(p => {
+            const d = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / 86400000)
+            const left = Math.max(0, 7 - d)
+            return (
+              <div key={p.id} className="px-3 py-2 rounded-xl bg-[#080808] border border-[#1e1e1e]">
+                <div className="text-xs font-medium text-white">{p.company_name}</div>
+                {p.contact_name && <div className="text-[10px] text-[#a1a1aa]">{p.contact_name}</div>}
+                <div className="text-[10px] text-[#52525b] mt-0.5">
+                  Relancé il y a {d} jour{d > 1 ? 's' : ''}
+                  {left > 0 && <span className="text-cyan-400/60"> · expire dans {left}j</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default async function OverviewPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -110,11 +202,18 @@ export default async function OverviewPage() {
     ? Math.round(convertedCount / totalProspects * 100)
     : 0
 
-  // Prospect lists for tracking panel
-  const contacted = allP.filter(p => p.status === 'contacte')
-  const toFollowUp = contacted.filter(p => p.updated_at < oneWeekAgo)
-  const recentlyContacted = contacted.filter(p => p.updated_at >= oneWeekAgo)
-  const relanced = allP.filter(p => p.status === 'relance')
+  // Prospect lists for tracking panel — split by channel
+  const byChannel = (channel: string) => {
+    const ch = allP.filter(p => (p.channel ?? 'email') === channel)
+    const contacted = ch.filter(p => p.status === 'contacte')
+    return {
+      recentlyContacted: contacted.filter(p => p.updated_at >= oneWeekAgo),
+      toFollowUp: contacted.filter(p => p.updated_at < oneWeekAgo),
+      relanced: ch.filter(p => p.status === 'relance'),
+    }
+  }
+  const emailTracking = byChannel('email')
+  const callTracking = byChannel('cold_call')
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
@@ -158,90 +257,25 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      {/* Prospect tracking panel */}
-      {(recentlyContacted.length > 0 || toFollowUp.length > 0 || relanced.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Contacté */}
-          <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-400" />
-                <span className="text-xs font-semibold text-white uppercase tracking-widest">Contacté</span>
-              </div>
-              <span className="text-[10px] text-[#52525b] bg-white/5 px-2 py-0.5 rounded-full">{recentlyContacted.length}</span>
-            </div>
-            <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
-              {recentlyContacted.length === 0 ? (
-                <p className="text-[10px] text-[#52525b] text-center py-4">Aucun prospect</p>
-              ) : recentlyContacted.map(p => {
-                const daysSince = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24))
-                return (
-                  <div key={p.id} className="px-3 py-2 rounded-xl bg-[#080808] border border-[#1e1e1e]">
-                    <div className="text-xs font-medium text-white">{p.company_name}</div>
-                    {p.contact_name && <div className="text-[10px] text-[#a1a1aa]">{p.contact_name}</div>}
-                    <div className="text-[10px] text-[#52525b] mt-0.5">il y a {daysSince} jour{daysSince > 1 ? 's' : ''}</div>
-                  </div>
-                )
-              })}
-            </div>
+      {/* Prospect tracking — Email */}
+      {(emailTracking.recentlyContacted.length > 0 || emailTracking.toFollowUp.length > 0 || emailTracking.relanced.length > 0) && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Prospection Email</span>
           </div>
+          <ProspectTrackingGrid data={emailTracking} />
+        </div>
+      )}
 
-          {/* À relancer */}
-          <div className="bg-[#0f0f0f] border border-orange-500/20 rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-orange-500/20 flex items-center justify-between bg-orange-500/5">
-              <div className="flex items-center gap-2">
-                <svg className="w-3.5 h-3.5 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="9" x2="12" y2="13" strokeLinecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" strokeLinecap="round"/></svg>
-                <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">À relancer</span>
-              </div>
-              <span className="text-[10px] text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">{toFollowUp.length}</span>
-            </div>
-            <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
-              {toFollowUp.length === 0 ? (
-                <p className="text-[10px] text-[#52525b] text-center py-4">Aucun prospect</p>
-              ) : toFollowUp.map(p => {
-                const daysSince = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24))
-                return (
-                  <div key={p.id} className="px-3 py-2 rounded-xl bg-[#080808] border border-orange-500/10">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-medium text-white">{p.company_name}</div>
-                      <a href="/admin/prospection" className="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">Relancer →</a>
-                    </div>
-                    {p.contact_name && <div className="text-[10px] text-[#a1a1aa]">{p.contact_name}</div>}
-                    <div className="text-[10px] text-orange-400 mt-0.5">{daysSince} jour{daysSince > 1 ? 's' : ''} sans réponse</div>
-                  </div>
-                )
-              })}
-            </div>
+      {/* Prospect tracking — Cold Call */}
+      {(callTracking.recentlyContacted.length > 0 || callTracking.toFollowUp.length > 0 || callTracking.relanced.length > 0) && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" strokeLinecap="round"/></svg>
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Prospection Cold Call</span>
           </div>
-
-          {/* Relancé */}
-          <div className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#1e1e1e] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                <span className="text-xs font-semibold text-white uppercase tracking-widest">Relancé</span>
-              </div>
-              <span className="text-[10px] text-[#52525b] bg-white/5 px-2 py-0.5 rounded-full">{relanced.length}</span>
-            </div>
-            <div className="p-3 space-y-1.5 max-h-64 overflow-y-auto">
-              {relanced.length === 0 ? (
-                <p className="text-[10px] text-[#52525b] text-center py-4">Aucun prospect</p>
-              ) : relanced.map(p => {
-                const daysSince = Math.floor((Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24))
-                const daysLeft = Math.max(0, 7 - daysSince)
-                return (
-                  <div key={p.id} className="px-3 py-2 rounded-xl bg-[#080808] border border-[#1e1e1e]">
-                    <div className="text-xs font-medium text-white">{p.company_name}</div>
-                    {p.contact_name && <div className="text-[10px] text-[#a1a1aa]">{p.contact_name}</div>}
-                    <div className="text-[10px] text-[#52525b] mt-0.5">
-                      Relancé il y a {daysSince} jour{daysSince > 1 ? 's' : ''}
-                      {daysLeft > 0 && <span className="text-cyan-400/60"> · expire dans {daysLeft}j</span>}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          <ProspectTrackingGrid data={callTracking} />
         </div>
       )}
 
