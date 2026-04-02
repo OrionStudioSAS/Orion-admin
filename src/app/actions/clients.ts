@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyPasswordReset, notifyProfileUpdated } from '@/lib/notifications'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -27,6 +28,14 @@ export async function updateClientProfile(profileId: string, data: {
 }) {
   const { admin } = await requireAdmin()
   await admin.from('profiles').update({ ...data, updated_at: new Date().toISOString() }).eq('id', profileId)
+
+  // Notify client
+  const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', profileId).single()
+  if (profile?.email) {
+    const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+    notifyProfileUpdated(profile.email, firstName)
+  }
+
   revalidatePath(`/admin/clients/${profileId}`)
 }
 
@@ -34,6 +43,13 @@ export async function resetClientPassword(userId: string, newPassword: string) {
   const { admin } = await requireAdmin()
   const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
   if (error) throw new Error(error.message)
+
+  // Notify client
+  const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', userId).single()
+  if (profile?.email) {
+    const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+    notifyPasswordReset(profile.email, firstName)
+  }
 }
 
 export async function addClientLink(profileId: string, name: string, url: string, visibleToClient: boolean) {

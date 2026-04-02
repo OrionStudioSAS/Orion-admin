@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Project } from '@/types/database'
+import { notifyProjectStatusChange, notifyNewFile, notifyStepUpdate, notifyNewStepMessage } from '@/lib/notifications'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -45,6 +46,15 @@ export async function updateProjectById(projectId: string, profileId: string, da
 
   await admin.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', projectId)
 
+  // Notify client on status change
+  if (data.status && data.status !== prevStatus) {
+    const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', profileId).single()
+    if (profile?.email) {
+      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+      notifyProjectStatusChange(profile.email, firstName, data.status)
+    }
+  }
+
   revalidateProjectPaths(projectId, profileId)
 }
 
@@ -59,6 +69,15 @@ export async function upsertProject(profileId: string, data: Partial<Project>) {
     await admin.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', existing.id)
   } else {
     await admin.from('projects').insert({ profile_id: profileId, ...data })
+  }
+
+  // Notify client on status change
+  if (data.status && data.status !== prevStatus) {
+    const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', profileId).single()
+    if (profile?.email) {
+      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+      notifyProjectStatusChange(profile.email, firstName, data.status)
+    }
   }
 
   revalidatePath('/admin/projects')
@@ -129,6 +148,15 @@ export async function uploadProjectFile(formData: FormData) {
 
   if (dbError) throw new Error(dbError.message)
 
+  // Notify client on new file (if visible)
+  if (visibleToClient) {
+    const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', profileId).single()
+    if (profile?.email) {
+      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+      notifyNewFile(profile.email, firstName, name)
+    }
+  }
+
   revalidateProjectPaths(projectId, profileId)
 }
 
@@ -191,8 +219,18 @@ export async function createStep(projectId: string, profileId: string, data: { t
 
 export async function updateStep(stepId: string, profileId: string, data: { title?: string; description?: string | null; status?: 'todo' | 'in_progress' | 'done'; start_date?: string | null; end_date?: string | null }, projectId?: string) {
   const { admin } = await requireAdmin()
+  const { data: step } = await admin.from('project_steps').select('title, status').eq('id', stepId).single()
   const { error } = await admin.from('project_steps').update(data).eq('id', stepId)
   if (error) throw new Error(error.message)
+
+  // Notify client on step status change
+  if (data.status && step && data.status !== step.status) {
+    const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', profileId).single()
+    if (profile?.email) {
+      const firstName = (profile.full_name || '').split(' ')[0] || 'vous'
+      notifyStepUpdate(profile.email, firstName, data.title || step.title, data.status)
+    }
+  }
   revalidatePath('/admin/projects')
   if (projectId) revalidatePath(`/admin/projects/${projectId}`)
   revalidatePath(`/admin/users/${profileId}`)
@@ -268,6 +306,24 @@ export async function sendStepMessage(formData: FormData): Promise<void> {
     attachment_type: attachmentType,
     is_read: false,
   })
+
+  // Notify client when admin sends a message
+  if (isAdmin) {
+    const [stepRes, projectRes, senderRes] = await Promise.all([
+      admin.from('project_steps').select('title').eq('id', stepId).single(),
+      admin.from('projects').select('profile_id').eq('id', projectId).single(),
+      admin.from('profiles').select('full_name').eq('id', user.id).single(),
+    ])
+    if (projectRes.data?.profile_id) {
+      const { data: clientProfile } = await admin.from('profiles').select('email, full_name').eq('id', projectRes.data.profile_id).single()
+      if (clientProfile?.email) {
+        const firstName = (clientProfile.full_name || '').split(' ')[0] || 'vous'
+        const senderName = senderRes.data?.full_name || 'L\'équipe'
+        const stepTitle = stepRes.data?.title || 'une étape'
+        notifyNewStepMessage(clientProfile.email, firstName, stepTitle, senderName)
+      }
+    }
+  }
 
   revalidatePath('/admin/projects')
   revalidatePath(`/admin/projects/${projectId}`)
