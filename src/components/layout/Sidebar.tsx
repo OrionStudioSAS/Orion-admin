@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon, FolderIcon, BuildingIcon, TargetIcon, ChartBarIcon } from '@/components/ui/Icons'
+import { LogoIcon, GridIcon, HistoryIcon, UsersIcon, LogOutIcon, StarIcon, XIcon, UserCircleIcon, MessageIcon, FolderIcon, BuildingIcon, TargetIcon, ChartBarIcon, LayoutIcon } from '@/components/ui/Icons'
 
 interface SidebarProps {
   profile: Profile
@@ -30,7 +30,10 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
 
   const navItems = [
     { href: '/dashboard', icon: GridIcon, label: 'Automatisations', section: null },
-    ...(!isAdmin ? [{ href: '/project', icon: FolderIcon, label: 'Mon projet', section: null }] : []),
+    ...(!isAdmin ? [
+      { href: '/project', icon: FolderIcon, label: 'Mon projet', section: null },
+      { href: '/cms', icon: LayoutIcon, label: 'Contenu', section: null },
+    ] : []),
     { href: '/history', icon: HistoryIcon, label: 'Historique', section: null },
     { href: isAdmin ? '/admin/chat' : '/chat', icon: MessageIcon, label: 'Messages', badge: unreadMessagesCount, section: null },
     ...(isAdmin ? [
@@ -38,6 +41,7 @@ export default function Sidebar({ profile, pendingRequestsCount = 0, unreadMessa
       { href: '/admin/projects', icon: FolderIcon, label: 'Projets', section: null },
       { href: '/admin/clients', icon: BuildingIcon, label: 'Clients', section: null },
       { href: '/admin/prospection', icon: TargetIcon, label: 'Prospection', section: null },
+      { href: '/admin/cms', icon: LayoutIcon, label: 'CMS', section: null },
       { href: '/admin/overview', icon: ChartBarIcon, label: 'Overview', section: null },
     ] : []),
   ]

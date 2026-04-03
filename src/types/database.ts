@@ -421,6 +421,27 @@ export interface Database {
         }
         Relationships: []
       }
+      client_sites: {
+        Row: {
+          id: string
+          project_id: string
+          github_repo: string
+          github_branch: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          github_repo: string
+          github_branch?: string
+          created_at?: string
+        }
+        Update: {
+          github_repo?: string
+          github_branch?: string
+        }
+        Relationships: []
+      }
       project_team_members: {
         Row: {
           id: string
@@ -523,3 +544,4 @@ export type StepMessage = Database['public']['Tables']['step_messages']['Row']
 export type App = Database['public']['Tables']['apps']['Row']
 export type ProjectApp = Database['public']['Tables']['project_apps']['Row']
 export type ProjectTeamMember = Database['public']['Tables']['project_team_members']['Row']
+export type ClientSite = Database['public']['Tables']['client_sites']['Row']
