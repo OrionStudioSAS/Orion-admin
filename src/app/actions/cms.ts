@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listHtmlFiles, getFileContent, updateFileContent } from '@/lib/github'
+import { listEditableFiles, getFileContent, updateFileContent } from '@/lib/github'
 import * as cheerio from 'cheerio'
 
 async function requireAuth() {
@@ -137,7 +137,17 @@ export async function getClientSite(): Promise<ClientSite | null> {
 
 export async function getCmsPages(siteId: string): Promise<CmsPage[]> {
   const site = await getSiteById(siteId)
-  return listHtmlFiles(site.github_repo, site.github_branch)
+  const allFiles = await listEditableFiles(site.github_repo, site.github_branch)
+
+  // Only return files that actually contain cms- IDs
+  const pagesWithCms: CmsPage[] = []
+  for (const file of allFiles) {
+    const { content } = await getFileContent(site.github_repo, site.github_branch, file.path)
+    if (/id=["']cms-/.test(content)) {
+      pagesWithCms.push(file)
+    }
+  }
+  return pagesWithCms
 }
 
 function idToLabel(id: string): string {
@@ -147,27 +157,60 @@ function idToLabel(id: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
+function isJsx(path: string): boolean {
+  return path.endsWith('.tsx') || path.endsWith('.jsx')
+}
+
+/** Parse cms- fields from JSX/TSX using regex */
+function parseJsxFields(content: string): CmsField[] {
+  const fields: CmsField[] = []
+  // Match: <tag ...id="cms-xxx"...>content</tag> or self-closing <img ...id="cms-xxx".../>
+  const regex = /<(\w+)\s[^>]*?id=["'](cms-[^"']+)["'][^>]*?(?:\/>|>([\s\S]*?)<\/\1>)/g
+  let match
+  while ((match = regex.exec(content)) !== null) {
+    const tag = match[1].toLowerCase()
+    const id = match[2]
+    const inner = match[3] || ''
+    const isImage = tag === 'img'
+
+    if (isImage) {
+      const srcMatch = match[0].match(/src=["']([^"']+)["']/)
+      fields.push({ id, label: idToLabel(id), tag, type: 'image', value: srcMatch?.[1] || '' })
+    } else {
+      // Clean JSX: extract text content, strip nested tags
+      const textValue = inner.replace(/<[^>]+>/g, '').trim()
+      fields.push({ id, label: idToLabel(id), tag, type: 'text', value: textValue })
+    }
+  }
+  return fields
+}
+
 export async function getCmsFields(siteId: string, pagePath: string): Promise<CmsPageData> {
   const site = await getSiteById(siteId)
   const { content, sha } = await getFileContent(site.github_repo, site.github_branch, pagePath)
 
-  const $ = cheerio.load(content)
-  const fields: CmsField[] = []
+  let fields: CmsField[]
 
-  $('[id^="cms-"]').each((_, el) => {
-    const $el = $(el)
-    const id = $el.attr('id') || ''
-    const tag = (el as { tagName?: string }).tagName?.toLowerCase() || 'div'
-    const isImage = tag === 'img'
-
-    fields.push({
-      id,
-      label: idToLabel(id),
-      tag,
-      type: isImage ? 'image' : 'text',
-      value: isImage ? ($el.attr('src') || '') : $el.html() || '',
+  if (isJsx(pagePath)) {
+    fields = parseJsxFields(content)
+  } else {
+    // HTML parsing with cheerio
+    const $ = cheerio.load(content)
+    fields = []
+    $('[id^="cms-"]').each((_, el) => {
+      const $el = $(el)
+      const id = $el.attr('id') || ''
+      const tag = (el as { tagName?: string }).tagName?.toLowerCase() || 'div'
+      const isImg = tag === 'img'
+      fields.push({
+        id,
+        label: idToLabel(id),
+        tag,
+        type: isImg ? 'image' : 'text',
+        value: isImg ? ($el.attr('src') || '') : $el.html() || '',
+      })
     })
-  })
+  }
 
   return { fields, sha }
 }
@@ -181,27 +224,43 @@ export async function updateCmsFields(
   const site = await getSiteById(siteId)
   const { content } = await getFileContent(site.github_repo, site.github_branch, pagePath)
 
-  const $ = cheerio.load(content)
+  let updatedContent: string
 
-  for (const { id, value } of updates) {
-    const $el = $(`#${id}`)
-    if (!$el.length) continue
-    const tag = ($el[0] as { tagName?: string }).tagName?.toLowerCase()
-    if (tag === 'img') {
-      $el.attr('src', value)
-    } else {
-      $el.html(value)
+  if (isJsx(pagePath)) {
+    updatedContent = content
+    for (const { id, value } of updates) {
+      // Update image src
+      const imgRegex = new RegExp(`(<\\w+\\s[^>]*?id=["']${id}["'][^>]*?)src=["'][^"']*["']`, 'g')
+      if (imgRegex.test(updatedContent)) {
+        updatedContent = updatedContent.replace(imgRegex, `$1src="${value}"`)
+        continue
+      }
+      // Update text content: match the element with this id and replace inner text
+      const textRegex = new RegExp(`(<(\\w+)\\s[^>]*?id=["']${id}["'][^>]*?>)[\\s\\S]*?(<\\/\\2>)`, 'g')
+      updatedContent = updatedContent.replace(textRegex, `$1${value}$3`)
     }
+  } else {
+    const $ = cheerio.load(content)
+    for (const { id, value } of updates) {
+      const $el = $(`#${id}`)
+      if (!$el.length) continue
+      const tag = ($el[0] as { tagName?: string }).tagName?.toLowerCase()
+      if (tag === 'img') {
+        $el.attr('src', value)
+      } else {
+        $el.html(value)
+      }
+    }
+    updatedContent = $.html()
   }
 
-  const updatedHtml = $.html()
   const pageName = pagePath.split('/').pop() || pagePath
 
   await updateFileContent(
     site.github_repo,
     site.github_branch,
     pagePath,
-    updatedHtml,
+    updatedContent,
     sha,
     `cms: update content in ${pageName}`
   )

@@ -31,13 +31,15 @@ async function githubFetch(url: string, options?: RequestInit) {
   return res.json()
 }
 
-/** List all HTML files in a repo recursively */
-export async function listHtmlFiles(repo: string, branch: string): Promise<{ name: string; path: string }[]> {
+const CMS_EXTENSIONS = ['.html', '.tsx', '.jsx']
+
+/** List all editable files (HTML, TSX, JSX) in a repo recursively */
+export async function listEditableFiles(repo: string, branch: string): Promise<{ name: string; path: string }[]> {
   const tree = await githubFetch(
     `https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`
   )
   return (tree.tree as GitHubFile[])
-    .filter((f: GitHubFile) => f.type === 'blob' && f.path.endsWith('.html'))
+    .filter((f: GitHubFile) => f.type === 'blob' && CMS_EXTENSIONS.some(ext => f.path.endsWith(ext)) && !f.path.includes('node_modules/'))
     .map((f: GitHubFile) => ({ name: f.path.split('/').pop() || f.path, path: f.path }))
 }
 
