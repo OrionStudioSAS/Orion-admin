@@ -120,7 +120,7 @@ export default function ChatWindow({ profileId, isAdmin, initialMessages }: Prop
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <p className="text-[#a1a1aa] text-sm">Aucun message pour le moment.</p>
             <p className="text-[#52525b] text-xs mt-1">
-              {isAdmin ? 'En attente d\'un message du membre.' : 'Envoyez un message à notre équipe.'}
+              {isAdmin ? 'Envoyez le premier message.' : 'Envoyez un message à notre équipe.'}
             </p>
           </div>
         )}

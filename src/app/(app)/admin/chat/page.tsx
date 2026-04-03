@@ -14,7 +14,17 @@ export default async function AdminChatPage() {
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect('/chat')
 
-  const conversations = await getConversations()
+  const [conversations, allUsersRes] = await Promise.all([
+    getConversations(),
+    admin.from('profiles').select('id, full_name, email, company').neq('role', 'admin').order('full_name'),
+  ])
+
+  const allUsers = (allUsersRes.data || []).map(u => ({
+    id: u.id,
+    full_name: u.full_name,
+    email: u.email,
+    company: u.company,
+  }))
 
   return (
     <div className="flex flex-col h-[calc(100svh-3.5rem)] lg:h-screen p-4 md:p-8 max-w-6xl mx-auto">
@@ -33,16 +43,10 @@ export default async function AdminChatPage() {
       </div>
 
       {/* Panel */}
-      {conversations.length === 0 ? (
-        <div className="flex-1 border border-dashed border-[#1e1e1e] rounded-2xl flex items-center justify-center">
-          <p className="text-[#a1a1aa] text-sm">Aucun membre n'a encore envoyé de message.</p>
-        </div>
-      ) : (
-        <div className="flex-1 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden flex flex-col min-h-0">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <AdminChatPanel initialConversations={conversations as any} adminId={user.id} />
-        </div>
-      )}
+      <div className="flex-1 bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl overflow-hidden flex flex-col min-h-0">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <AdminChatPanel initialConversations={conversations as any} adminId={user.id} allUsers={allUsers} />
+      </div>
     </div>
   )
 }
