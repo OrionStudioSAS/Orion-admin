@@ -31,6 +31,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const [newProjectId, setNewProjectId] = useState('')
   const [addingError, setAddingError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const repoRef = useRef<HTMLInputElement>(null)
 
   const selectedSite = sites.find(s => s.id === selectedSiteId)
@@ -101,9 +102,14 @@ export default function CmsPanel({ initialSites, projects }: Props) {
       .filter(f => editedValues[f.id] !== f.value)
       .map(f => ({ id: f.id, value: editedValues[f.id] }))
 
-    await updateCmsFields(selectedSiteId, selectedSection, updates)
+    const result = await updateCmsFields(selectedSiteId, selectedSection, updates)
 
     setSaving(false)
+    if (!result.success) {
+      setSaveError(result.error || 'Erreur lors de la publication')
+      setTimeout(() => setSaveError(''), 5000)
+      return
+    }
     setSaveSuccess(true)
     setFields(prev => prev.map(f => {
       const update = updates.find(u => u.id === f.id)
@@ -277,6 +283,9 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {saveError && (
+                  <span className="text-[10px] text-red-400 max-w-[200px] truncate">{saveError}</span>
+                )}
                 {hasChanges && (
                   <button
                     type="button"

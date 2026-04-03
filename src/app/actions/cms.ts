@@ -275,34 +275,40 @@ export async function updateCmsFields(
   siteId: string,
   _sectionKey: string,
   updates: { id: string; value: string }[]
-) {
+): Promise<{ success: boolean; error?: string }> {
+  try {
   const site = await getSiteById(siteId)
   const repo = site.github_repo as string
   const branch = site.github_branch as string
 
   const files = await listEditableFiles(repo, branch)
 
+  // Load all files that contain cms- IDs once
+  const fileCache = new Map<string, { content: string; sha: string }>()
+  for (const file of files) {
+    const data = await getFileContent(repo, branch, file.path)
+    if (/id=["']cms-/.test(data.content)) {
+      fileCache.set(file.path, { content: data.content, sha: data.sha })
+    }
+  }
+
   // Group updates by source file
-  const fileUpdates = new Map<string, { id: string; value: string; sha: string; content: string }[]>()
+  const fileUpdates = new Map<string, { id: string; value: string }[]>()
 
   for (const update of updates) {
-    for (const file of files) {
-      const { content, sha } = await getFileContent(repo, branch, file.path)
-      const idPattern = new RegExp(`id=["']${update.id}["']`)
-      if (idPattern.test(content)) {
-        if (!fileUpdates.has(file.path)) {
-          fileUpdates.set(file.path, [])
-        }
-        fileUpdates.get(file.path)!.push({ ...update, sha, content })
+    for (const [filePath, { content }] of fileCache) {
+      if (new RegExp(`id=["']${update.id}["']`).test(content)) {
+        if (!fileUpdates.has(filePath)) fileUpdates.set(filePath, [])
+        fileUpdates.get(filePath)!.push(update)
         break
       }
     }
   }
 
-  // Apply updates per file
+  // Apply updates per file and push
   for (const [filePath, edits] of fileUpdates) {
-    let content = edits[0].content
-    const sha = edits[0].sha
+    const cached = fileCache.get(filePath)!
+    let content = cached.content
     const isHtml = filePath.endsWith('.html')
 
     if (isHtml) {
@@ -331,8 +337,11 @@ export async function updateCmsFields(
     }
 
     const fileName = filePath.split('/').pop() || filePath
-    await updateFileContent(repo, branch, filePath, content, sha, `cms: update content in ${fileName}`)
+    await updateFileContent(repo, branch, filePath, content, cached.sha, `cms: update content in ${fileName}`)
   }
 
   return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inconnue' }
+  }
 }

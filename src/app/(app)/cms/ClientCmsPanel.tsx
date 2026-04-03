@@ -17,6 +17,7 @@ export default function ClientCmsPanel({ site }: Props) {
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   // Load sections on mount
   useEffect(() => {
@@ -51,9 +52,14 @@ export default function ClientCmsPanel({ site }: Props) {
       .filter(f => editedValues[f.id] !== f.value)
       .map(f => ({ id: f.id, value: editedValues[f.id] }))
 
-    await updateCmsFields(site.id, selectedSection, updates)
+    const result = await updateCmsFields(site.id, selectedSection, updates)
 
     setSaving(false)
+    if (!result.success) {
+      setSaveError(result.error || 'Erreur lors de la publication')
+      setTimeout(() => setSaveError(''), 5000)
+      return
+    }
     setSaveSuccess(true)
     setFields(prev => prev.map(f => {
       const update = updates.find(u => u.id === f.id)
@@ -126,6 +132,9 @@ export default function ClientCmsPanel({ site }: Props) {
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {saveError && (
+                  <span className="text-[10px] text-red-400 max-w-[200px] truncate">{saveError}</span>
+                )}
                 {hasChanges && (
                   <button
                     type="button"
