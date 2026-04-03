@@ -71,13 +71,12 @@ export async function getSites(): Promise<ClientSite[]> {
   }))
 }
 
-export async function addSite(projectId: string, githubRepo: string, siteUrl: string, githubBranch: string = 'main') {
+export async function addSite(projectId: string, githubRepo: string, githubBranch: string = 'main') {
   const { admin } = await requireAdmin()
   const { error } = await admin.from('client_sites').insert({
     project_id: projectId,
     github_repo: githubRepo,
     github_branch: githubBranch,
-    site_url: siteUrl.replace(/\/$/, ''),
   })
   if (error) return { success: false, error: error.message }
   return { success: true }
@@ -94,11 +93,12 @@ export async function removeSite(siteId: string) {
 
 async function getSiteById(siteId: string) {
   const { user, admin, isAdmin } = await requireAuth()
-  const { data } = await admin.from('client_sites').select('*, projects(profile_id)').eq('id', siteId).single()
+  const { data } = await admin.from('client_sites').select('*, projects(profile_id, site_url)').eq('id', siteId).single()
   if (!data) throw new Error('Site introuvable')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!isAdmin && (data as any).projects?.profile_id !== user.id) throw new Error('Accès refusé')
-  return data
+  const d = data as any
+  if (!isAdmin && d.projects?.profile_id !== user.id) throw new Error('Accès refusé')
+  return { ...data, site_url: d.projects?.site_url as string | null }
 }
 
 /** Get the site linked to the client's project */
