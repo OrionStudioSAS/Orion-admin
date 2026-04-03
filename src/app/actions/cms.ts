@@ -31,9 +31,9 @@ export interface ClientSite {
   client_name: string | null
 }
 
-export interface CmsPage {
+export interface CmsSection {
   name: string
-  path: string
+  key: string
 }
 
 export interface CmsField {
@@ -42,9 +42,10 @@ export interface CmsField {
   tag: string
   type: 'text' | 'image'
   value: string
+  section: string
 }
 
-export interface CmsPageData {
+export interface CmsSectionData {
   fields: CmsField[]
 }
 
@@ -89,7 +90,7 @@ export async function removeSite(siteId: string) {
   return { success: true }
 }
 
-// ─── Pages & Fields (scraping the live site) ───
+// ─── Sections & Fields (from source files, grouped by ID prefix) ───
 
 async function getSiteById(siteId: string) {
   const { user, admin, isAdmin } = await requireAuth()
@@ -138,115 +139,153 @@ export async function getClientSite(): Promise<ClientSite | null> {
   }
 }
 
-/** Scrape a URL and return parsed cheerio */
-async function scrapePage(url: string) {
-  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'OrionCMS/1.0' } })
-  if (!res.ok) throw new Error(`Erreur ${res.status} en chargeant ${url}`)
-  const html = await res.text()
-  return cheerio.load(html)
-}
-
 function idToLabel(id: string): string {
-  return id
-    .replace(/^cms-/, '')
+  // Remove cms- prefix AND section prefix: cms-hero_titre → Titre
+  const withoutCms = id.replace(/^cms-/, '')
+  const withoutSection = withoutCms.replace(/^[^_]+_/, '')
+  return withoutSection
     .replace(/[_-]/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function pathToName(path: string): string {
-  if (path === '/') return 'Accueil'
-  return path
-    .replace(/^\//, '')
-    .replace(/\//g, ' / ')
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
+function sectionFromId(id: string): string {
+  // cms-hero_titre → hero, cms-apropos_nom → apropos
+  const withoutCms = id.replace(/^cms-/, '')
+  const section = withoutCms.split('_')[0]
+  return section
 }
 
-/** Discover pages on the live site that contain cms- fields */
-export async function getCmsPages(siteId: string): Promise<CmsPage[]> {
-  const site = await getSiteById(siteId)
-  if (!site.site_url) throw new Error('URL du site non configurée')
+function sectionToName(key: string): string {
+  const map: Record<string, string> = {
+    hero: 'Accueil',
+    apropos: 'À propos',
+    expertise: 'Expertise',
+    diplomes: 'Diplômes',
+    associations: 'Associations',
+    impedance: 'Impédance',
+    cabinets: 'Cabinets',
+    avis: 'Avis clients',
+    contact: 'Contact',
+    faq: 'FAQ',
+    footer: 'Pied de page',
+    tarifs: 'Tarifs',
+    services: 'Services',
+    equipe: 'Équipe',
+    blog: 'Blog',
+    galerie: 'Galerie',
+  }
+  return map[key] || key.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 
-  const baseUrl = site.site_url as string
-  const $ = await scrapePage(baseUrl)
+/** Parse all cms- IDs from a source file (JSX/TSX/HTML) */
+function parseFieldsFromSource(content: string, filePath: string): CmsField[] {
+  const fields: CmsField[] = []
+  const isHtml = filePath.endsWith('.html')
 
-  // Collect internal links
-  const paths = new Set<string>(['/'])
-  $('a[href]').each((_, el) => {
-    const href = $(el).attr('href') || ''
-    if (href.startsWith('/') && !href.startsWith('//') && !href.includes('.') && href !== '#') {
-      paths.add(href.replace(/\/$/, '') || '/')
-    } else if (href.startsWith(baseUrl)) {
-      const path = href.replace(baseUrl, '').replace(/\/$/, '') || '/'
-      if (!path.includes('.')) paths.add(path)
-    }
-  })
+  if (isHtml) {
+    const $ = cheerio.load(content)
+    $('[id^="cms-"]').each((_, el) => {
+      const $el = $(el)
+      const id = $el.attr('id') || ''
+      const tag = (el as { tagName?: string }).tagName?.toLowerCase() || 'div'
+      const isImage = tag === 'img'
+      fields.push({
+        id,
+        label: idToLabel(id),
+        tag,
+        type: isImage ? 'image' : 'text',
+        value: isImage ? ($el.attr('src') || '') : $el.html() || '',
+        section: sectionFromId(id),
+      })
+    })
+  } else {
+    // JSX/TSX: regex
+    const regex = /<(\w+)\s[^>]*?id=["'](cms-[^"']+)["'][^>]*?(?:\/>|>([\s\S]*?)<\/\1>)/g
+    let match
+    while ((match = regex.exec(content)) !== null) {
+      const tag = match[1].toLowerCase()
+      const id = match[2]
+      const inner = match[3] || ''
+      const isImage = tag === 'img'
 
-  // Check each page for cms- fields
-  const pages: CmsPage[] = []
-  for (const path of paths) {
-    try {
-      const pageUrl = path === '/' ? baseUrl : `${baseUrl}${path}`
-      const $page = await scrapePage(pageUrl)
-      const hasCmsFields = $page('[id^="cms-"]').length > 0
-      if (hasCmsFields) {
-        pages.push({ name: pathToName(path), path })
+      if (isImage) {
+        const srcMatch = match[0].match(/src=["']([^"']+)["']/)
+        fields.push({ id, label: idToLabel(id), tag, type: 'image', value: srcMatch?.[1] || '', section: sectionFromId(id) })
+      } else {
+        const textValue = inner.replace(/<[^>]+>/g, '').trim()
+        fields.push({ id, label: idToLabel(id), tag, type: 'text', value: textValue, section: sectionFromId(id) })
       }
-    } catch {
-      // Skip pages that fail to load
     }
   }
 
-  return pages
+  return fields
 }
 
-/** Scrape a page from the live site and extract cms- fields */
-export async function getCmsFields(siteId: string, pagePath: string): Promise<CmsPageData> {
+/** Scan all source files and return sections that have cms- fields */
+export async function getCmsSections(siteId: string): Promise<CmsSection[]> {
   const site = await getSiteById(siteId)
-  if (!site.site_url) throw new Error('URL du site non configurée')
+  const repo = site.github_repo as string
+  const branch = site.github_branch as string
 
-  const baseUrl = site.site_url as string
-  const pageUrl = pagePath === '/' ? baseUrl : `${baseUrl}${pagePath}`
-  const $ = await scrapePage(pageUrl)
+  const files = await listEditableFiles(repo, branch)
+  const sectionKeys = new Set<string>()
 
-  const fields: CmsField[] = []
+  for (const file of files) {
+    const { content } = await getFileContent(repo, branch, file.path)
+    if (!/id=["']cms-/.test(content)) continue
+    const fields = parseFieldsFromSource(content, file.path)
+    fields.forEach(f => sectionKeys.add(f.section))
+  }
 
-  $('[id^="cms-"]').each((_, el) => {
-    const $el = $(el)
-    const id = $el.attr('id') || ''
-    const tag = (el as { tagName?: string }).tagName?.toLowerCase() || 'div'
-    const isImage = tag === 'img'
-
-    fields.push({
-      id,
-      label: idToLabel(id),
-      tag,
-      type: isImage ? 'image' : 'text',
-      value: isImage ? ($el.attr('src') || '') : $el.text() || '',
-    })
+  // Return sections in a logical order
+  const ordered = ['hero', 'apropos', 'expertise', 'diplomes', 'associations', 'impedance', 'cabinets', 'services', 'tarifs', 'avis', 'contact', 'faq', 'footer']
+  const sorted = [...sectionKeys].sort((a, b) => {
+    const ia = ordered.indexOf(a)
+    const ib = ordered.indexOf(b)
+    if (ia === -1 && ib === -1) return a.localeCompare(b)
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
   })
 
-  return { fields }
+  return sorted.map(key => ({ name: sectionToName(key), key }))
 }
 
-/** Find the source file in the repo that contains a given cms- ID, update it, and push */
+/** Get all cms- fields for a given section, scanning source files */
+export async function getCmsSectionFields(siteId: string, sectionKey: string): Promise<CmsSectionData> {
+  const site = await getSiteById(siteId)
+  const repo = site.github_repo as string
+  const branch = site.github_branch as string
+
+  const files = await listEditableFiles(repo, branch)
+  const allFields: CmsField[] = []
+
+  for (const file of files) {
+    const { content } = await getFileContent(repo, branch, file.path)
+    if (!/id=["']cms-/.test(content)) continue
+    const fields = parseFieldsFromSource(content, file.path)
+    allFields.push(...fields.filter(f => f.section === sectionKey))
+  }
+
+  return { fields: allFields }
+}
+
+/** Find the source file containing a cms- ID, update it, and push */
 export async function updateCmsFields(
   siteId: string,
-  _pagePath: string,
+  _sectionKey: string,
   updates: { id: string; value: string }[]
 ) {
   const site = await getSiteById(siteId)
   const repo = site.github_repo as string
   const branch = site.github_branch as string
 
-  // Get all editable source files
   const files = await listEditableFiles(repo, branch)
 
   // Group updates by source file
   const fileUpdates = new Map<string, { id: string; value: string; sha: string; content: string }[]>()
 
   for (const update of updates) {
-    // Search for the file containing this ID
     for (const file of files) {
       const { content, sha } = await getFileContent(repo, branch, file.path)
       const idPattern = new RegExp(`id=["']${update.id}["']`)
@@ -280,15 +319,12 @@ export async function updateCmsFields(
       }
       content = $.html()
     } else {
-      // JSX/TSX: regex replacement
       for (const { id, value } of edits) {
-        // Image src update
         const imgRegex = new RegExp(`(<\\w+\\s[^>]*?id=["']${id}["'][^>]*?)src=["'][^"']*["']`)
         if (imgRegex.test(content)) {
           content = content.replace(imgRegex, `$1src="${value}"`)
           continue
         }
-        // Text content update
         const textRegex = new RegExp(`(<(\\w+)\\s[^>]*?id=["']${id}["'][^>]*?>)[\\s\\S]*?(<\\/\\2>)`)
         content = content.replace(textRegex, `$1${value}$3`)
       }

@@ -2,56 +2,56 @@
 
 import { useState, useEffect } from 'react'
 import { DocumentIcon, CheckIcon, XIcon, ExternalLinkIcon } from '@/components/ui/Icons'
-import { ClientSite, CmsPage, CmsField, getCmsPages, getCmsFields, updateCmsFields } from '@/app/actions/cms'
+import { ClientSite, CmsSection, CmsField, getCmsSections, getCmsSectionFields, updateCmsFields } from '@/app/actions/cms'
 
 interface Props {
   site: ClientSite
 }
 
 export default function ClientCmsPanel({ site }: Props) {
-  const [pages, setPages] = useState<CmsPage[]>([])
-  const [selectedPage, setSelectedPage] = useState<string | null>(null)
+  const [sections, setSections] = useState<CmsSection[]>([])
+  const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [fields, setFields] = useState<CmsField[]>([])
   const [editedValues, setEditedValues] = useState<Record<string, string>>({})
-  const [loadingPages, setLoadingPages] = useState(true)
+  const [loadingSections, setLoadingSections] = useState(true)
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // Load pages on mount
+  // Load sections on mount
   useEffect(() => {
-    getCmsPages(site.id).then(p => {
-      setPages(p)
-      setLoadingPages(false)
-    }).catch(() => setLoadingPages(false))
+    getCmsSections(site.id).then(s => {
+      setSections(s)
+      setLoadingSections(false)
+    }).catch(() => setLoadingSections(false))
   }, [site.id])
 
-  // Load fields when page changes
+  // Load fields when section changes
   useEffect(() => {
-    if (!selectedPage) { setFields([]); return }
+    if (!selectedSection) { setFields([]); return }
     setLoadingFields(true)
     setFields([])
     setEditedValues({})
-    getCmsFields(site.id, selectedPage).then(data => {
+    getCmsSectionFields(site.id, selectedSection).then(data => {
       setFields(data.fields)
       const initial: Record<string, string> = {}
       data.fields.forEach(f => { initial[f.id] = f.value })
       setEditedValues(initial)
       setLoadingFields(false)
     }).catch(() => setLoadingFields(false))
-  }, [site.id, selectedPage])
+  }, [site.id, selectedSection])
 
   const hasChanges = fields.some(f => editedValues[f.id] !== f.value)
 
   async function handleSave() {
-    if (!selectedPage || !hasChanges) return
+    if (!selectedSection || !hasChanges) return
     setSaving(true)
     setSaveSuccess(false)
     const updates = fields
       .filter(f => editedValues[f.id] !== f.value)
       .map(f => ({ id: f.id, value: editedValues[f.id] }))
 
-    await updateCmsFields(site.id, selectedPage, updates)
+    await updateCmsFields(site.id, selectedSection, updates)
 
     setSaving(false)
     setSaveSuccess(true)
@@ -70,33 +70,33 @@ export default function ClientCmsPanel({ site }: Props) {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* Left: Pages */}
+      {/* Left: Sections */}
       <div className="w-56 shrink-0 border-r border-[#1e1e1e] flex flex-col min-h-0">
         <div className="px-4 py-3.5 border-b border-[#1e1e1e] shrink-0">
-          <div className="text-[10px] font-semibold text-[#a1a1aa] uppercase tracking-widest">Pages</div>
+          <div className="text-[10px] font-semibold text-[#a1a1aa] uppercase tracking-widest">Sections</div>
           <div className="text-[10px] text-[#52525b] mt-0.5">{site.project_name || site.site_url}</div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {loadingPages ? (
+          {loadingSections ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
             </div>
-          ) : pages.length === 0 ? (
-            <p className="text-[10px] text-[#52525b] text-center py-6">Aucune page trouvée</p>
+          ) : sections.length === 0 ? (
+            <p className="text-[10px] text-[#52525b] text-center py-6">Aucune section trouvée</p>
           ) : (
-            pages.map(page => {
-              const isActive = selectedPage === page.path
+            sections.map(section => {
+              const isActive = selectedSection === section.key
               return (
                 <button
-                  key={page.path}
+                  key={section.key}
                   type="button"
-                  onClick={() => setSelectedPage(page.path)}
+                  onClick={() => setSelectedSection(section.key)}
                   className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors cursor-pointer
                     ${isActive ? 'bg-white/5' : 'hover:bg-white/[0.03]'}`}
                 >
                   <DocumentIcon className="w-3.5 h-3.5 text-[#a1a1aa] shrink-0" />
                   <span className={`text-xs truncate ${isActive ? 'text-white font-medium' : 'text-[#a1a1aa]'}`}>
-                    {page.name}
+                    {section.name}
                   </span>
                 </button>
               )
@@ -107,13 +107,13 @@ export default function ClientCmsPanel({ site }: Props) {
 
       {/* Right: Fields */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        {!selectedPage ? (
+        {!selectedSection ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
               <DocumentIcon className="w-5 h-5 text-[#a1a1aa]" />
             </div>
-            <p className="text-[#a1a1aa] text-sm">Sélectionnez une page</p>
-            <p className="text-[#52525b] text-xs mt-1">Choisissez la page à modifier</p>
+            <p className="text-[#a1a1aa] text-sm">Sélectionnez une section</p>
+            <p className="text-[#52525b] text-xs mt-1">Choisissez la section à modifier</p>
           </div>
         ) : (
           <>
@@ -122,7 +122,7 @@ export default function ClientCmsPanel({ site }: Props) {
               <div className="flex items-center gap-3 min-w-0">
                 <DocumentIcon className="w-4 h-4 text-[#a1a1aa] shrink-0" />
                 <span className="text-sm font-medium text-white truncate">
-                  {pages.find(p => p.path === selectedPage)?.name || selectedPage}
+                  {sections.find(s => s.key === selectedSection)?.name || selectedSection}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -164,7 +164,7 @@ export default function ClientCmsPanel({ site }: Props) {
                 </div>
               ) : fields.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-[#a1a1aa] text-sm">Aucun champ modifiable sur cette page</p>
+                  <p className="text-[#a1a1aa] text-sm">Aucun champ modifiable</p>
                 </div>
               ) : (
                 fields.map(field => (

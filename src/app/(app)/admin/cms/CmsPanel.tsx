@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon, ExternalLinkIcon } from '@/components/ui/Icons'
-import { ClientSite, CmsPage, CmsField, addSite, removeSite, getCmsPages, getCmsFields, updateCmsFields } from '@/app/actions/cms'
+import { ClientSite, CmsSection, CmsField, addSite, removeSite, getCmsSections, getCmsSectionFields, updateCmsFields } from '@/app/actions/cms'
 
 interface ProjectInfo {
   id: string
@@ -18,11 +18,11 @@ interface Props {
 export default function CmsPanel({ initialSites, projects }: Props) {
   const [sites, setSites] = useState(initialSites)
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(initialSites[0]?.id || null)
-  const [pages, setPages] = useState<CmsPage[]>([])
-  const [selectedPage, setSelectedPage] = useState<string | null>(null)
+  const [sections, setSections] = useState<CmsSection[]>([])
+  const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [fields, setFields] = useState<CmsField[]>([])
   const [editedValues, setEditedValues] = useState<Record<string, string>>({})
-  const [loadingPages, setLoadingPages] = useState(false)
+  const [loadingSections, setLoadingSections] = useState(false)
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAddSite, setShowAddSite] = useState(false)
@@ -35,35 +35,34 @@ export default function CmsPanel({ initialSites, projects }: Props) {
 
   const selectedSite = sites.find(s => s.id === selectedSiteId)
 
-  // Load pages when site changes
+  // Load sections when site changes
   useEffect(() => {
-    if (!selectedSiteId) { setPages([]); setSelectedPage(null); return }
-    setLoadingPages(true)
-    setPages([])
-    setSelectedPage(null)
+    if (!selectedSiteId) { setSections([]); setSelectedSection(null); return }
+    setLoadingSections(true)
+    setSections([])
+    setSelectedSection(null)
     setFields([])
-    getCmsPages(selectedSiteId).then(p => {
-      setPages(p)
-      setLoadingPages(false)
-    }).catch(() => setLoadingPages(false))
+    getCmsSections(selectedSiteId).then(s => {
+      setSections(s)
+      setLoadingSections(false)
+    }).catch(() => setLoadingSections(false))
   }, [selectedSiteId])
 
-  // Load fields when page changes
+  // Load fields when section changes
   useEffect(() => {
-    if (!selectedSiteId || !selectedPage) { setFields([]); return }
+    if (!selectedSiteId || !selectedSection) { setFields([]); return }
     setLoadingFields(true)
     setFields([])
     setEditedValues({})
-    getCmsFields(selectedSiteId, selectedPage).then(data => {
+    getCmsSectionFields(selectedSiteId, selectedSection).then(data => {
       setFields(data.fields)
       const initial: Record<string, string> = {}
       data.fields.forEach(f => { initial[f.id] = f.value })
       setEditedValues(initial)
       setLoadingFields(false)
     }).catch(() => setLoadingFields(false))
-  }, [selectedSiteId, selectedPage])
+  }, [selectedSiteId, selectedSection])
 
-  // Focus repo input when adding site
   useEffect(() => {
     if (showAddSite) repoRef.current?.focus()
   }, [showAddSite])
@@ -95,19 +94,17 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   }
 
   async function handleSave() {
-    if (!selectedSiteId || !selectedPage || !hasChanges) return
+    if (!selectedSiteId || !selectedSection || !hasChanges) return
     setSaving(true)
     setSaveSuccess(false)
     const updates = fields
       .filter(f => editedValues[f.id] !== f.value)
       .map(f => ({ id: f.id, value: editedValues[f.id] }))
 
-    await updateCmsFields(selectedSiteId, selectedPage, updates)
+    await updateCmsFields(selectedSiteId, selectedSection, updates)
 
-    // Refresh fields from live site (may take a moment for deploy)
     setSaving(false)
     setSaveSuccess(true)
-    // Update local fields to reflect saved values
     setFields(prev => prev.map(f => {
       const update = updates.find(u => u.id === f.id)
       return update ? { ...f, value: update.value } : f
@@ -123,7 +120,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* Left: Sites + Pages navigation */}
+      {/* Left: Sites + Sections navigation */}
       <div className="w-64 shrink-0 border-r border-[#1e1e1e] flex flex-col min-h-0">
         {/* Site selector */}
         <div className="px-4 py-3.5 border-b border-[#1e1e1e] shrink-0">
@@ -212,38 +209,38 @@ export default function CmsPanel({ initialSites, projects }: Props) {
           </div>
         )}
 
-        {/* Pages list */}
+        {/* Sections list */}
         <div className="flex-1 overflow-y-auto">
           {selectedSiteId && (
             <div className="px-3 pt-3 pb-1">
-              <span className="text-[10px] font-semibold text-[#a1a1aa] uppercase tracking-widest px-1">Pages</span>
+              <span className="text-[10px] font-semibold text-[#a1a1aa] uppercase tracking-widest px-1">Sections</span>
             </div>
           )}
-          {loadingPages ? (
+          {loadingSections ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
             </div>
           ) : (
-            pages.map(page => {
-              const isActive = selectedPage === page.path
+            sections.map(section => {
+              const isActive = selectedSection === section.key
               return (
                 <button
-                  key={page.path}
+                  key={section.key}
                   type="button"
-                  onClick={() => setSelectedPage(page.path)}
+                  onClick={() => setSelectedSection(section.key)}
                   className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors cursor-pointer
                     ${isActive ? 'bg-white/5' : 'hover:bg-white/[0.03]'}`}
                 >
                   <DocumentIcon className="w-3.5 h-3.5 text-[#a1a1aa] shrink-0" />
                   <span className={`text-xs truncate ${isActive ? 'text-white font-medium' : 'text-[#a1a1aa]'}`}>
-                    {page.name}
+                    {section.name}
                   </span>
                 </button>
               )
             })
           )}
-          {!loadingPages && selectedSiteId && pages.length === 0 && (
-            <p className="text-[10px] text-[#52525b] text-center py-6">Aucune page avec des champs cms-</p>
+          {!loadingSections && selectedSiteId && sections.length === 0 && (
+            <p className="text-[10px] text-[#52525b] text-center py-6">Aucun champ cms- trouvé</p>
           )}
         </div>
       </div>
@@ -258,25 +255,25 @@ export default function CmsPanel({ initialSites, projects }: Props) {
             <p className="text-[#a1a1aa] text-sm">Ajoutez un site pour commencer</p>
             <p className="text-[#52525b] text-xs mt-1">Cliquez sur + pour lier un repo GitHub</p>
           </div>
-        ) : !selectedPage ? (
+        ) : !selectedSection ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
               <DocumentIcon className="w-5 h-5 text-[#a1a1aa]" />
             </div>
-            <p className="text-[#a1a1aa] text-sm">Sélectionnez une page</p>
-            <p className="text-[#52525b] text-xs mt-1">Choisissez une page à éditer</p>
+            <p className="text-[#a1a1aa] text-sm">Sélectionnez une section</p>
+            <p className="text-[#52525b] text-xs mt-1">Choisissez une section à éditer</p>
           </div>
         ) : (
           <>
-            {/* Page header */}
+            {/* Section header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e1e1e] shrink-0">
               <div className="flex items-center gap-3 min-w-0">
                 <DocumentIcon className="w-4 h-4 text-[#a1a1aa] shrink-0" />
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-white truncate">
-                    {pages.find(p => p.path === selectedPage)?.name || selectedPage}
+                    {sections.find(s => s.key === selectedSection)?.name || selectedSection}
                   </div>
-                  <div className="text-[10px] text-[#52525b]">{selectedSite?.site_url}{selectedPage === '/' ? '' : selectedPage}</div>
+                  <div className="text-[10px] text-[#52525b]">{selectedSite?.project_name || selectedSite?.github_repo}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -319,9 +316,6 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               ) : fields.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <p className="text-[#a1a1aa] text-sm">Aucun champ modifiable</p>
-                  <p className="text-[#52525b] text-xs mt-1">
-                    Ajoutez des attributs <code className="text-white/60 bg-white/5 px-1.5 py-0.5 rounded">id=&quot;cms-...&quot;</code> dans le HTML
-                  </p>
                 </div>
               ) : (
                 fields.map(field => (
