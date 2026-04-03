@@ -12,7 +12,6 @@ export default function ClientCmsPanel({ site }: Props) {
   const [pages, setPages] = useState<CmsPage[]>([])
   const [selectedPage, setSelectedPage] = useState<string | null>(null)
   const [fields, setFields] = useState<CmsField[]>([])
-  const [sha, setSha] = useState('')
   const [editedValues, setEditedValues] = useState<Record<string, string>>({})
   const [loadingPages, setLoadingPages] = useState(true)
   const [loadingFields, setLoadingFields] = useState(false)
@@ -35,7 +34,6 @@ export default function ClientCmsPanel({ site }: Props) {
     setEditedValues({})
     getCmsFields(site.id, selectedPage).then(data => {
       setFields(data.fields)
-      setSha(data.sha)
       const initial: Record<string, string> = {}
       data.fields.forEach(f => { initial[f.id] = f.value })
       setEditedValues(initial)
@@ -53,17 +51,14 @@ export default function ClientCmsPanel({ site }: Props) {
       .filter(f => editedValues[f.id] !== f.value)
       .map(f => ({ id: f.id, value: editedValues[f.id] }))
 
-    await updateCmsFields(site.id, selectedPage, updates, sha)
+    await updateCmsFields(site.id, selectedPage, updates)
 
-    // Refresh
-    const data = await getCmsFields(site.id, selectedPage)
-    setFields(data.fields)
-    setSha(data.sha)
-    const initial: Record<string, string> = {}
-    data.fields.forEach(f => { initial[f.id] = f.value })
-    setEditedValues(initial)
     setSaving(false)
     setSaveSuccess(true)
+    setFields(prev => prev.map(f => {
+      const update = updates.find(u => u.id === f.id)
+      return update ? { ...f, value: update.value } : f
+    }))
     setTimeout(() => setSaveSuccess(false), 3000)
   }
 
@@ -79,7 +74,7 @@ export default function ClientCmsPanel({ site }: Props) {
       <div className="w-56 shrink-0 border-r border-[#1e1e1e] flex flex-col min-h-0">
         <div className="px-4 py-3.5 border-b border-[#1e1e1e] shrink-0">
           <div className="text-[10px] font-semibold text-[#a1a1aa] uppercase tracking-widest">Pages</div>
-          <div className="text-[10px] text-[#52525b] mt-0.5">{site.project_name || site.github_repo}</div>
+          <div className="text-[10px] text-[#52525b] mt-0.5">{site.project_name || site.site_url}</div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loadingPages ? (

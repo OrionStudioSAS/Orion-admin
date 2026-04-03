@@ -21,13 +21,13 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const [pages, setPages] = useState<CmsPage[]>([])
   const [selectedPage, setSelectedPage] = useState<string | null>(null)
   const [fields, setFields] = useState<CmsField[]>([])
-  const [sha, setSha] = useState('')
   const [editedValues, setEditedValues] = useState<Record<string, string>>({})
   const [loadingPages, setLoadingPages] = useState(false)
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showAddSite, setShowAddSite] = useState(false)
   const [newRepo, setNewRepo] = useState('')
+  const [newSiteUrl, setNewSiteUrl] = useState('')
   const [newBranch, setNewBranch] = useState('main')
   const [newProjectId, setNewProjectId] = useState('')
   const [addingError, setAddingError] = useState('')
@@ -57,7 +57,6 @@ export default function CmsPanel({ initialSites, projects }: Props) {
     setEditedValues({})
     getCmsFields(selectedSiteId, selectedPage).then(data => {
       setFields(data.fields)
-      setSha(data.sha)
       const initial: Record<string, string> = {}
       data.fields.forEach(f => { initial[f.id] = f.value })
       setEditedValues(initial)
@@ -73,16 +72,16 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const hasChanges = fields.some(f => editedValues[f.id] !== f.value)
 
   async function handleAddSite() {
-    if (!newProjectId || !newRepo.trim()) return
+    if (!newProjectId || !newRepo.trim() || !newSiteUrl.trim()) return
     setAddingError('')
-    const result = await addSite(newProjectId, newRepo.trim(), newBranch.trim() || 'main')
+    const result = await addSite(newProjectId, newRepo.trim(), newSiteUrl.trim(), newBranch.trim() || 'main')
     if (!result.success) { setAddingError(result.error || 'Erreur'); return }
-    // Refresh sites
     const { getSites } = await import('@/app/actions/cms')
     const freshSites = await getSites()
     setSites(freshSites)
     setShowAddSite(false)
     setNewRepo('')
+    setNewSiteUrl('')
     setNewBranch('main')
     setNewProjectId('')
     if (freshSites.length > 0) setSelectedSiteId(freshSites[0].id)
@@ -105,17 +104,16 @@ export default function CmsPanel({ initialSites, projects }: Props) {
       .filter(f => editedValues[f.id] !== f.value)
       .map(f => ({ id: f.id, value: editedValues[f.id] }))
 
-    await updateCmsFields(selectedSiteId, selectedPage, updates, sha)
+    await updateCmsFields(selectedSiteId, selectedPage, updates)
 
-    // Refresh fields to get new sha
-    const data = await getCmsFields(selectedSiteId, selectedPage)
-    setFields(data.fields)
-    setSha(data.sha)
-    const initial: Record<string, string> = {}
-    data.fields.forEach(f => { initial[f.id] = f.value })
-    setEditedValues(initial)
+    // Refresh fields from live site (may take a moment for deploy)
     setSaving(false)
     setSaveSuccess(true)
+    // Update local fields to reflect saved values
+    setFields(prev => prev.map(f => {
+      const update = updates.find(u => u.id === f.id)
+      return update ? { ...f, value: update.value } : f
+    }))
     setTimeout(() => setSaveSuccess(false), 3000)
   }
 
@@ -157,7 +155,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                     <div className="text-xs font-medium text-white truncate">
                       {site.project_name || site.github_repo}
                     </div>
-                    <div className="text-[10px] text-[#52525b] truncate">{site.github_repo}</div>
+                    <div className="text-[10px] text-[#52525b] truncate">{site.site_url || site.github_repo}</div>
                   </div>
                   <button
                     type="button"
@@ -190,6 +188,13 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               ))}
             </select>
             <input
+              type="text"
+              value={newSiteUrl}
+              onChange={e => setNewSiteUrl(e.target.value)}
+              placeholder="https://monsite.com"
+              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] text-white text-xs rounded-lg px-2.5 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
+            />
+            <input
               ref={repoRef}
               type="text"
               value={newRepo}
@@ -208,7 +213,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
             <button
               type="button"
               onClick={handleAddSite}
-              disabled={!newProjectId || !newRepo.trim()}
+              disabled={!newProjectId || !newRepo.trim() || !newSiteUrl.trim()}
               className="w-full text-[11px] font-medium bg-white text-black py-2 rounded-lg hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
               Ajouter le site
@@ -240,14 +245,14 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                 >
                   <DocumentIcon className="w-3.5 h-3.5 text-[#a1a1aa] shrink-0" />
                   <span className={`text-xs truncate ${isActive ? 'text-white font-medium' : 'text-[#a1a1aa]'}`}>
-                    {page.path}
+                    {page.name}
                   </span>
                 </button>
               )
             })
           )}
           {!loadingPages && selectedSiteId && pages.length === 0 && (
-            <p className="text-[10px] text-[#52525b] text-center py-6">Aucun fichier .html trouvé</p>
+            <p className="text-[10px] text-[#52525b] text-center py-6">Aucune page avec des champs cms-</p>
           )}
         </div>
       </div>
@@ -268,7 +273,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               <DocumentIcon className="w-5 h-5 text-[#a1a1aa]" />
             </div>
             <p className="text-[#a1a1aa] text-sm">Sélectionnez une page</p>
-            <p className="text-[#52525b] text-xs mt-1">Choisissez un fichier HTML à éditer</p>
+            <p className="text-[#52525b] text-xs mt-1">Choisissez une page à éditer</p>
           </div>
         ) : (
           <>
@@ -277,8 +282,10 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               <div className="flex items-center gap-3 min-w-0">
                 <DocumentIcon className="w-4 h-4 text-[#a1a1aa] shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-white truncate">{selectedPage}</div>
-                  <div className="text-[10px] text-[#52525b]">{selectedSite?.github_repo} · {selectedSite?.github_branch}</div>
+                  <div className="text-sm font-medium text-white truncate">
+                    {pages.find(p => p.path === selectedPage)?.name || selectedPage}
+                  </div>
+                  <div className="text-[10px] text-[#52525b]">{selectedSite?.site_url}{selectedPage === '/' ? '' : selectedPage}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -304,8 +311,6 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                 >
                   {saving ? (
                     <div className="w-3 h-3 border-2 border-black/20 border-t-black/60 rounded-full animate-spin" />
-                  ) : saveSuccess ? (
-                    <CheckIcon className="w-3 h-3" />
                   ) : (
                     <CheckIcon className="w-3 h-3" />
                   )}
@@ -332,7 +337,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                   <div key={field.id} className="group">
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-medium text-white">{field.label}</label>
-                      <span className="text-[9px] text-[#52525b] font-mono">&lt;{field.tag}&gt; #{field.id}</span>
+                      <span className="text-[9px] text-[#52525b] font-mono">&lt;{field.tag}&gt;</span>
                     </div>
                     {field.type === 'image' ? (
                       <div className="space-y-2">

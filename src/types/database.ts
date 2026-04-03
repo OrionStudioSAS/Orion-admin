@@ -427,6 +427,7 @@ export interface Database {
           project_id: string
           github_repo: string
           github_branch: string
+          site_url: string | null
           created_at: string
         }
         Insert: {
@@ -434,11 +435,13 @@ export interface Database {
           project_id: string
           github_repo: string
           github_branch?: string
+          site_url?: string | null
           created_at?: string
         }
         Update: {
           github_repo?: string
           github_branch?: string
+          site_url?: string | null
         }
         Relationships: []
       }

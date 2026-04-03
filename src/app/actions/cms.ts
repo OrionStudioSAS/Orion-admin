@@ -25,6 +25,7 @@ export interface ClientSite {
   project_id: string
   github_repo: string
   github_branch: string
+  site_url: string | null
   created_at: string
   project_name: string | null
   client_name: string | null
@@ -45,7 +46,6 @@ export interface CmsField {
 
 export interface CmsPageData {
   fields: CmsField[]
-  sha: string
 }
 
 // ─── Sites CRUD ───
@@ -64,18 +64,20 @@ export async function getSites(): Promise<ClientSite[]> {
     project_id: s.project_id,
     github_repo: s.github_repo,
     github_branch: s.github_branch,
+    site_url: s.site_url,
     created_at: s.created_at,
     project_name: s.projects?.name || null,
     client_name: s.projects?.profiles?.full_name || null,
   }))
 }
 
-export async function addSite(projectId: string, githubRepo: string, githubBranch: string = 'main') {
+export async function addSite(projectId: string, githubRepo: string, siteUrl: string, githubBranch: string = 'main') {
   const { admin } = await requireAdmin()
   const { error } = await admin.from('client_sites').insert({
     project_id: projectId,
     github_repo: githubRepo,
     github_branch: githubBranch,
+    site_url: siteUrl.replace(/\/$/, ''),
   })
   if (error) return { success: false, error: error.message }
   return { success: true }
@@ -88,7 +90,7 @@ export async function removeSite(siteId: string) {
   return { success: true }
 }
 
-// ─── Pages & Fields ───
+// ─── Pages & Fields (scraping the live site) ───
 
 async function getSiteById(siteId: string) {
   const { user, admin, isAdmin } = await requireAuth()
@@ -129,25 +131,19 @@ export async function getClientSite(): Promise<ClientSite | null> {
     project_id: s.project_id,
     github_repo: s.github_repo,
     github_branch: s.github_branch,
+    site_url: s.site_url,
     created_at: s.created_at,
     project_name: s.projects?.name || null,
     client_name: s.projects?.profiles?.full_name || null,
   }
 }
 
-export async function getCmsPages(siteId: string): Promise<CmsPage[]> {
-  const site = await getSiteById(siteId)
-  const allFiles = await listEditableFiles(site.github_repo, site.github_branch)
-
-  // Only return files that actually contain cms- IDs
-  const pagesWithCms: CmsPage[] = []
-  for (const file of allFiles) {
-    const { content } = await getFileContent(site.github_repo, site.github_branch, file.path)
-    if (/id=["']cms-/.test(content)) {
-      pagesWithCms.push(file)
-    }
-  }
-  return pagesWithCms
+/** Scrape a URL and return parsed cheerio */
+async function scrapePage(url: string) {
+  const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'OrionCMS/1.0' } })
+  if (!res.ok) throw new Error(`Erreur ${res.status} en chargeant ${url}`)
+  const html = await res.text()
+  return cheerio.load(html)
 }
 
 function idToLabel(id: string): string {
@@ -157,113 +153,150 @@ function idToLabel(id: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function isJsx(path: string): boolean {
-  return path.endsWith('.tsx') || path.endsWith('.jsx')
+function pathToName(path: string): string {
+  if (path === '/') return 'Accueil'
+  return path
+    .replace(/^\//, '')
+    .replace(/\//g, ' / ')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
 }
 
-/** Parse cms- fields from JSX/TSX using regex */
-function parseJsxFields(content: string): CmsField[] {
-  const fields: CmsField[] = []
-  // Match: <tag ...id="cms-xxx"...>content</tag> or self-closing <img ...id="cms-xxx".../>
-  const regex = /<(\w+)\s[^>]*?id=["'](cms-[^"']+)["'][^>]*?(?:\/>|>([\s\S]*?)<\/\1>)/g
-  let match
-  while ((match = regex.exec(content)) !== null) {
-    const tag = match[1].toLowerCase()
-    const id = match[2]
-    const inner = match[3] || ''
-    const isImage = tag === 'img'
+/** Discover pages on the live site that contain cms- fields */
+export async function getCmsPages(siteId: string): Promise<CmsPage[]> {
+  const site = await getSiteById(siteId)
+  if (!site.site_url) throw new Error('URL du site non configurée')
 
-    if (isImage) {
-      const srcMatch = match[0].match(/src=["']([^"']+)["']/)
-      fields.push({ id, label: idToLabel(id), tag, type: 'image', value: srcMatch?.[1] || '' })
-    } else {
-      // Clean JSX: extract text content, strip nested tags
-      const textValue = inner.replace(/<[^>]+>/g, '').trim()
-      fields.push({ id, label: idToLabel(id), tag, type: 'text', value: textValue })
+  const baseUrl = site.site_url as string
+  const $ = await scrapePage(baseUrl)
+
+  // Collect internal links
+  const paths = new Set<string>(['/'])
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') || ''
+    if (href.startsWith('/') && !href.startsWith('//') && !href.includes('.') && href !== '#') {
+      paths.add(href.replace(/\/$/, '') || '/')
+    } else if (href.startsWith(baseUrl)) {
+      const path = href.replace(baseUrl, '').replace(/\/$/, '') || '/'
+      if (!path.includes('.')) paths.add(path)
+    }
+  })
+
+  // Check each page for cms- fields
+  const pages: CmsPage[] = []
+  for (const path of paths) {
+    try {
+      const pageUrl = path === '/' ? baseUrl : `${baseUrl}${path}`
+      const $page = await scrapePage(pageUrl)
+      const hasCmsFields = $page('[id^="cms-"]').length > 0
+      if (hasCmsFields) {
+        pages.push({ name: pathToName(path), path })
+      }
+    } catch {
+      // Skip pages that fail to load
     }
   }
-  return fields
+
+  return pages
 }
 
+/** Scrape a page from the live site and extract cms- fields */
 export async function getCmsFields(siteId: string, pagePath: string): Promise<CmsPageData> {
   const site = await getSiteById(siteId)
-  const { content, sha } = await getFileContent(site.github_repo, site.github_branch, pagePath)
+  if (!site.site_url) throw new Error('URL du site non configurée')
 
-  let fields: CmsField[]
+  const baseUrl = site.site_url as string
+  const pageUrl = pagePath === '/' ? baseUrl : `${baseUrl}${pagePath}`
+  const $ = await scrapePage(pageUrl)
 
-  if (isJsx(pagePath)) {
-    fields = parseJsxFields(content)
-  } else {
-    // HTML parsing with cheerio
-    const $ = cheerio.load(content)
-    fields = []
-    $('[id^="cms-"]').each((_, el) => {
-      const $el = $(el)
-      const id = $el.attr('id') || ''
-      const tag = (el as { tagName?: string }).tagName?.toLowerCase() || 'div'
-      const isImg = tag === 'img'
-      fields.push({
-        id,
-        label: idToLabel(id),
-        tag,
-        type: isImg ? 'image' : 'text',
-        value: isImg ? ($el.attr('src') || '') : $el.html() || '',
-      })
+  const fields: CmsField[] = []
+
+  $('[id^="cms-"]').each((_, el) => {
+    const $el = $(el)
+    const id = $el.attr('id') || ''
+    const tag = (el as { tagName?: string }).tagName?.toLowerCase() || 'div'
+    const isImage = tag === 'img'
+
+    fields.push({
+      id,
+      label: idToLabel(id),
+      tag,
+      type: isImage ? 'image' : 'text',
+      value: isImage ? ($el.attr('src') || '') : $el.text() || '',
     })
-  }
+  })
 
-  return { fields, sha }
+  return { fields }
 }
 
+/** Find the source file in the repo that contains a given cms- ID, update it, and push */
 export async function updateCmsFields(
   siteId: string,
-  pagePath: string,
-  updates: { id: string; value: string }[],
-  sha: string
+  _pagePath: string,
+  updates: { id: string; value: string }[]
 ) {
   const site = await getSiteById(siteId)
-  const { content } = await getFileContent(site.github_repo, site.github_branch, pagePath)
+  const repo = site.github_repo as string
+  const branch = site.github_branch as string
 
-  let updatedContent: string
+  // Get all editable source files
+  const files = await listEditableFiles(repo, branch)
 
-  if (isJsx(pagePath)) {
-    updatedContent = content
-    for (const { id, value } of updates) {
-      // Update image src
-      const imgRegex = new RegExp(`(<\\w+\\s[^>]*?id=["']${id}["'][^>]*?)src=["'][^"']*["']`, 'g')
-      if (imgRegex.test(updatedContent)) {
-        updatedContent = updatedContent.replace(imgRegex, `$1src="${value}"`)
-        continue
-      }
-      // Update text content: match the element with this id and replace inner text
-      const textRegex = new RegExp(`(<(\\w+)\\s[^>]*?id=["']${id}["'][^>]*?>)[\\s\\S]*?(<\\/\\2>)`, 'g')
-      updatedContent = updatedContent.replace(textRegex, `$1${value}$3`)
-    }
-  } else {
-    const $ = cheerio.load(content)
-    for (const { id, value } of updates) {
-      const $el = $(`#${id}`)
-      if (!$el.length) continue
-      const tag = ($el[0] as { tagName?: string }).tagName?.toLowerCase()
-      if (tag === 'img') {
-        $el.attr('src', value)
-      } else {
-        $el.html(value)
+  // Group updates by source file
+  const fileUpdates = new Map<string, { id: string; value: string; sha: string; content: string }[]>()
+
+  for (const update of updates) {
+    // Search for the file containing this ID
+    for (const file of files) {
+      const { content, sha } = await getFileContent(repo, branch, file.path)
+      const idPattern = new RegExp(`id=["']${update.id}["']`)
+      if (idPattern.test(content)) {
+        if (!fileUpdates.has(file.path)) {
+          fileUpdates.set(file.path, [])
+        }
+        fileUpdates.get(file.path)!.push({ ...update, sha, content })
+        break
       }
     }
-    updatedContent = $.html()
   }
 
-  const pageName = pagePath.split('/').pop() || pagePath
+  // Apply updates per file
+  for (const [filePath, edits] of fileUpdates) {
+    let content = edits[0].content
+    const sha = edits[0].sha
+    const isHtml = filePath.endsWith('.html')
 
-  await updateFileContent(
-    site.github_repo,
-    site.github_branch,
-    pagePath,
-    updatedContent,
-    sha,
-    `cms: update content in ${pageName}`
-  )
+    if (isHtml) {
+      const $ = cheerio.load(content)
+      for (const { id, value } of edits) {
+        const $el = $(`#${id}`)
+        if (!$el.length) continue
+        const tag = ($el[0] as { tagName?: string }).tagName?.toLowerCase()
+        if (tag === 'img') {
+          $el.attr('src', value)
+        } else {
+          $el.html(value)
+        }
+      }
+      content = $.html()
+    } else {
+      // JSX/TSX: regex replacement
+      for (const { id, value } of edits) {
+        // Image src update
+        const imgRegex = new RegExp(`(<\\w+\\s[^>]*?id=["']${id}["'][^>]*?)src=["'][^"']*["']`)
+        if (imgRegex.test(content)) {
+          content = content.replace(imgRegex, `$1src="${value}"`)
+          continue
+        }
+        // Text content update
+        const textRegex = new RegExp(`(<(\\w+)\\s[^>]*?id=["']${id}["'][^>]*?>)[\\s\\S]*?(<\\/\\2>)`)
+        content = content.replace(textRegex, `$1${value}$3`)
+      }
+    }
+
+    const fileName = filePath.split('/').pop() || filePath
+    await updateFileContent(repo, branch, filePath, content, sha, `cms: update content in ${fileName}`)
+  }
 
   return { success: true }
 }
