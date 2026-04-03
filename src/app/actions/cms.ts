@@ -54,7 +54,7 @@ export async function getSites(): Promise<ClientSite[]> {
   const { admin } = await requireAdmin()
   const { data } = await admin
     .from('client_sites')
-    .select('*, projects(name, profiles(full_name))')
+    .select('*, projects(name, site_url, profiles(full_name))')
     .order('created_at', { ascending: false })
 
   if (!data) return []
@@ -64,7 +64,7 @@ export async function getSites(): Promise<ClientSite[]> {
     project_id: s.project_id,
     github_repo: s.github_repo,
     github_branch: s.github_branch,
-    site_url: s.site_url,
+    site_url: s.projects?.site_url || null,
     created_at: s.created_at,
     project_name: s.projects?.name || null,
     client_name: s.projects?.profiles?.full_name || null,
@@ -117,7 +117,7 @@ export async function getClientSite(): Promise<ClientSite | null> {
 
   const { data: site } = await admin
     .from('client_sites')
-    .select('*, projects(name, profiles(full_name))')
+    .select('*, projects(name, site_url, profiles(full_name))')
     .eq('project_id', project.id)
     .limit(1)
     .single()
@@ -131,7 +131,7 @@ export async function getClientSite(): Promise<ClientSite | null> {
     project_id: s.project_id,
     github_repo: s.github_repo,
     github_branch: s.github_branch,
-    site_url: s.site_url,
+    site_url: s.projects?.site_url || null,
     created_at: s.created_at,
     project_name: s.projects?.name || null,
     client_name: s.projects?.profiles?.full_name || null,

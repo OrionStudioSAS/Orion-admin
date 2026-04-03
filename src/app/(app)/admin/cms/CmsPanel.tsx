@@ -27,7 +27,6 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const [saving, setSaving] = useState(false)
   const [showAddSite, setShowAddSite] = useState(false)
   const [newRepo, setNewRepo] = useState('')
-  const [newSiteUrl, setNewSiteUrl] = useState('')
   const [newBranch, setNewBranch] = useState('main')
   const [newProjectId, setNewProjectId] = useState('')
   const [addingError, setAddingError] = useState('')
@@ -72,16 +71,15 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const hasChanges = fields.some(f => editedValues[f.id] !== f.value)
 
   async function handleAddSite() {
-    if (!newProjectId || !newRepo.trim() || !newSiteUrl.trim()) return
+    if (!newProjectId || !newRepo.trim()) return
     setAddingError('')
-    const result = await addSite(newProjectId, newRepo.trim(), newSiteUrl.trim(), newBranch.trim() || 'main')
+    const result = await addSite(newProjectId, newRepo.trim(), newBranch.trim() || 'main')
     if (!result.success) { setAddingError(result.error || 'Erreur'); return }
     const { getSites } = await import('@/app/actions/cms')
     const freshSites = await getSites()
     setSites(freshSites)
     setShowAddSite(false)
     setNewRepo('')
-    setNewSiteUrl('')
     setNewBranch('main')
     setNewProjectId('')
     if (freshSites.length > 0) setSelectedSiteId(freshSites[0].id)
@@ -188,13 +186,6 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               ))}
             </select>
             <input
-              type="text"
-              value={newSiteUrl}
-              onChange={e => setNewSiteUrl(e.target.value)}
-              placeholder="https://monsite.com"
-              className="w-full bg-[#0f0f0f] border border-[#1e1e1e] text-white text-xs rounded-lg px-2.5 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
-            />
-            <input
               ref={repoRef}
               type="text"
               value={newRepo}
@@ -213,7 +204,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
             <button
               type="button"
               onClick={handleAddSite}
-              disabled={!newProjectId || !newRepo.trim() || !newSiteUrl.trim()}
+              disabled={!newProjectId || !newRepo.trim()}
               className="w-full text-[11px] font-medium bg-white text-black py-2 rounded-lg hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
               Ajouter le site
