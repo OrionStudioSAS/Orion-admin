@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon, ExternalLinkIcon } from '@/components/ui/Icons'
-import { ClientSite, CmsSection, CmsField, addSite, removeSite, getCmsSections, getCmsSectionFields, updateCmsFields } from '@/app/actions/cms'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon } from '@/components/ui/Icons'
+import {
+  ClientSite, CmsSection, CmsField, CmsStringField, CmsStringArrayField, CmsObjectArrayField, CmsFieldUpdate,
+  addSite, removeSite, getCmsSections, getCmsSectionFields, updateCmsFields
+} from '@/app/actions/cms'
 
 interface ProjectInfo {
   id: string
@@ -15,13 +18,196 @@ interface Props {
   projects: ProjectInfo[]
 }
 
+// ─── Edited state shape ───
+
+interface EditedState {
+  strings: Record<string, string>           // name → value
+  stringArrays: Record<string, string[]>    // name → items
+  objectArrays: Record<string, Record<string, string>[]> // name → items
+}
+
+function buildInitialEdited(fields: CmsField[]): EditedState {
+  const state: EditedState = { strings: {}, stringArrays: {}, objectArrays: {} }
+  for (const f of fields) {
+    if (f.type === 'string') state.strings[f.name] = f.value
+    else if (f.type === 'string_array') state.stringArrays[f.name] = [...f.items]
+    else if (f.type === 'object_array') state.objectArrays[f.name] = f.items.map(item => ({ ...item }))
+  }
+  return state
+}
+
+function hasAnyChanges(fields: CmsField[], edited: EditedState): boolean {
+  for (const f of fields) {
+    if (f.type === 'string' && edited.strings[f.name] !== f.value) return true
+    if (f.type === 'string_array' && JSON.stringify(edited.stringArrays[f.name]) !== JSON.stringify(f.items)) return true
+    if (f.type === 'object_array' && JSON.stringify(edited.objectArrays[f.name]) !== JSON.stringify(f.items)) return true
+  }
+  return false
+}
+
+function buildUpdates(fields: CmsField[], edited: EditedState): CmsFieldUpdate[] {
+  const updates: CmsFieldUpdate[] = []
+  for (const f of fields) {
+    if (f.type === 'string' && edited.strings[f.name] !== f.value) {
+      updates.push({ name: f.name, type: 'string', value: edited.strings[f.name] })
+    }
+    if (f.type === 'string_array' && JSON.stringify(edited.stringArrays[f.name]) !== JSON.stringify(f.items)) {
+      updates.push({ name: f.name, type: 'string_array', value: edited.stringArrays[f.name] })
+    }
+    if (f.type === 'object_array' && JSON.stringify(edited.objectArrays[f.name]) !== JSON.stringify(f.items)) {
+      updates.push({ name: f.name, type: 'object_array', value: edited.objectArrays[f.name] })
+    }
+  }
+  return updates
+}
+
+// ─── Field renderers ───
+
+function StringFieldEditor({ field, value, onChange }: { field: CmsStringField; value: string; onChange: (v: string) => void }) {
+  const changed = value !== field.value
+  const rows = value.length > 200 ? 5 : value.length > 100 ? 4 : value.length > 50 ? 3 : 2
+  return (
+    <div>
+      <label className="text-xs font-medium text-white mb-1.5 block">{field.label}</label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={rows}
+        className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-xl px-3.5 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors resize-none"
+        placeholder="Contenu..."
+      />
+      {changed && <div className="mt-1 text-[9px] text-amber-400/80">Modifié</div>}
+    </div>
+  )
+}
+
+function StringArrayFieldEditor({ field, items, onChange }: { field: CmsStringArrayField; items: string[]; onChange: (v: string[]) => void }) {
+  const changed = JSON.stringify(items) !== JSON.stringify(field.items)
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium text-white">{field.label}</label>
+        <span className="text-[9px] text-[#52525b]">{items.length} élément{items.length > 1 ? 's' : ''}</span>
+      </div>
+      <div className="space-y-1.5">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={item}
+              onChange={e => { const next = [...items]; next[i] = e.target.value; onChange(next) }}
+              className="flex-1 bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
+            />
+            <button
+              type="button"
+              onClick={() => { const next = items.filter((_, j) => j !== i); onChange(next) }}
+              className="text-[#52525b] hover:text-red-400 transition-colors cursor-pointer p-1"
+            >
+              <XIcon className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange([...items, ''])}
+        className="flex items-center gap-1.5 text-[10px] text-[#a1a1aa] hover:text-white mt-2 px-2 py-1 rounded-lg border border-dashed border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer"
+      >
+        <PlusIcon className="w-3 h-3" />
+        Ajouter
+      </button>
+      {changed && <div className="mt-1 text-[9px] text-amber-400/80">Modifié</div>}
+    </div>
+  )
+}
+
+function ObjectArrayFieldEditor({ field, items, onChange }: { field: CmsObjectArrayField; items: Record<string, string>[]; onChange: (v: Record<string, string>[]) => void }) {
+  const changed = JSON.stringify(items) !== JSON.stringify(field.items)
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium text-white">{field.label}</label>
+        <span className="text-[9px] text-[#52525b]">{items.length} élément{items.length > 1 ? 's' : ''}</span>
+      </div>
+      <div className="space-y-2">
+        {items.map((item, i) => {
+          const isExpanded = expandedIdx === i
+          const preview = item[field.keys[0]] || `Élément ${i + 1}`
+          return (
+            <div key={i} className="border border-[#1e1e1e] rounded-xl overflow-hidden">
+              <div
+                className="flex items-center justify-between px-3.5 py-2.5 bg-[#0a0a0a] cursor-pointer hover:bg-white/[0.03] transition-colors"
+                onClick={() => setExpandedIdx(isExpanded ? null : i)}
+              >
+                <span className="text-xs text-white truncate">{preview}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); const next = items.filter((_, j) => j !== i); onChange(next); if (expandedIdx === i) setExpandedIdx(null) }}
+                    className="text-[#52525b] hover:text-red-400 transition-colors cursor-pointer"
+                  >
+                    <TrashIcon className="w-3 h-3" />
+                  </button>
+                  <svg className={`w-3 h-3 text-[#52525b] transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+              {isExpanded && (
+                <div className="px-3.5 py-3 space-y-2 border-t border-[#1e1e1e]">
+                  {field.keys.map((key, ki) => (
+                    <div key={key}>
+                      <label className="text-[10px] text-[#a1a1aa] mb-1 block">{field.keyLabels[ki]}</label>
+                      {(item[key] || '').length > 80 ? (
+                        <textarea
+                          value={item[key] || ''}
+                          onChange={e => { const next = items.map((it, j) => j === i ? { ...it, [key]: e.target.value } : it); onChange(next) }}
+                          rows={3}
+                          className="w-full bg-[#0f0f0f] border border-[#1e1e1e] text-white text-xs rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors resize-none"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={item[key] || ''}
+                          onChange={e => { const next = items.map((it, j) => j === i ? { ...it, [key]: e.target.value } : it); onChange(next) }}
+                          className="w-full bg-[#0f0f0f] border border-[#1e1e1e] text-white text-xs rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          const newItem: Record<string, string> = {}
+          field.keys.forEach(k => { newItem[k] = '' })
+          onChange([...items, newItem])
+          setExpandedIdx(items.length)
+        }}
+        className="flex items-center gap-1.5 text-[10px] text-[#a1a1aa] hover:text-white mt-2 px-2 py-1 rounded-lg border border-dashed border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer"
+      >
+        <PlusIcon className="w-3 h-3" />
+        Ajouter
+      </button>
+      {changed && <div className="mt-1 text-[9px] text-amber-400/80">Modifié</div>}
+    </div>
+  )
+}
+
+// ─── Main panel ───
+
 export default function CmsPanel({ initialSites, projects }: Props) {
   const [sites, setSites] = useState(initialSites)
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(initialSites[0]?.id || null)
   const [sections, setSections] = useState<CmsSection[]>([])
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [fields, setFields] = useState<CmsField[]>([])
-  const [editedValues, setEditedValues] = useState<Record<string, string>>({})
+  const [edited, setEdited] = useState<EditedState>({ strings: {}, stringArrays: {}, objectArrays: {} })
   const [loadingSections, setLoadingSections] = useState(false)
   const [loadingFields, setLoadingFields] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -35,6 +221,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const repoRef = useRef<HTMLInputElement>(null)
 
   const selectedSite = sites.find(s => s.id === selectedSiteId)
+  const hasChanges = hasAnyChanges(fields, edited)
 
   // Load sections when site changes
   useEffect(() => {
@@ -54,12 +241,10 @@ export default function CmsPanel({ initialSites, projects }: Props) {
     if (!selectedSiteId || !selectedSection) { setFields([]); return }
     setLoadingFields(true)
     setFields([])
-    setEditedValues({})
+    setEdited({ strings: {}, stringArrays: {}, objectArrays: {} })
     getCmsSectionFields(selectedSiteId, selectedSection).then(data => {
       setFields(data.fields)
-      const initial: Record<string, string> = {}
-      data.fields.forEach(f => { initial[f.id] = f.value })
-      setEditedValues(initial)
+      setEdited(buildInitialEdited(data.fields))
       setLoadingFields(false)
     }).catch(() => setLoadingFields(false))
   }, [selectedSiteId, selectedSection])
@@ -68,7 +253,17 @@ export default function CmsPanel({ initialSites, projects }: Props) {
     if (showAddSite) repoRef.current?.focus()
   }, [showAddSite])
 
-  const hasChanges = fields.some(f => editedValues[f.id] !== f.value)
+  const updateString = useCallback((name: string, value: string) => {
+    setEdited(prev => ({ ...prev, strings: { ...prev.strings, [name]: value } }))
+  }, [])
+
+  const updateStringArray = useCallback((name: string, value: string[]) => {
+    setEdited(prev => ({ ...prev, stringArrays: { ...prev.stringArrays, [name]: value } }))
+  }, [])
+
+  const updateObjectArray = useCallback((name: string, value: Record<string, string>[]) => {
+    setEdited(prev => ({ ...prev, objectArrays: { ...prev.objectArrays, [name]: value } }))
+  }, [])
 
   async function handleAddSite() {
     if (!newProjectId || !newRepo.trim()) return
@@ -98,12 +293,8 @@ export default function CmsPanel({ initialSites, projects }: Props) {
     if (!selectedSiteId || !selectedSection || !hasChanges) return
     setSaving(true)
     setSaveSuccess(false)
-    const updates = fields
-      .filter(f => editedValues[f.id] !== f.value)
-      .map(f => ({ id: f.id, value: editedValues[f.id] }))
-
+    const updates = buildUpdates(fields, edited)
     const result = await updateCmsFields(selectedSiteId, selectedSection, updates)
-
     setSaving(false)
     if (!result.success) {
       setSaveError(result.error || 'Erreur lors de la publication')
@@ -111,17 +302,18 @@ export default function CmsPanel({ initialSites, projects }: Props) {
       return
     }
     setSaveSuccess(true)
+    // Refresh fields from edited state
     setFields(prev => prev.map(f => {
-      const update = updates.find(u => u.id === f.id)
-      return update ? { ...f, value: update.value } : f
+      if (f.type === 'string' && edited.strings[f.name] !== undefined) return { ...f, value: edited.strings[f.name] }
+      if (f.type === 'string_array' && edited.stringArrays[f.name]) return { ...f, items: edited.stringArrays[f.name] }
+      if (f.type === 'object_array' && edited.objectArrays[f.name]) return { ...f, items: edited.objectArrays[f.name] }
+      return f
     }))
     setTimeout(() => setSaveSuccess(false), 3000)
   }
 
   function handleReset() {
-    const initial: Record<string, string> = {}
-    fields.forEach(f => { initial[f.id] = f.value })
-    setEditedValues(initial)
+    setEdited(buildInitialEdited(fields))
   }
 
   return (
@@ -246,7 +438,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
             })
           )}
           {!loadingSections && selectedSiteId && sections.length === 0 && (
-            <p className="text-[10px] text-[#52525b] text-center py-6">Aucun champ cms- trouvé</p>
+            <p className="text-[10px] text-[#52525b] text-center py-6">Aucune section trouvée</p>
           )}
         </div>
       </div>
@@ -317,7 +509,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
             </div>
 
             {/* Fields */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
               {loadingFields ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
@@ -327,42 +519,39 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                   <p className="text-[#a1a1aa] text-sm">Aucun champ modifiable</p>
                 </div>
               ) : (
-                fields.map(field => (
-                  <div key={field.id} className="group">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-medium text-white">{field.label}</label>
-                      <span className="text-[9px] text-[#52525b] font-mono">&lt;{field.tag}&gt;</span>
-                    </div>
-                    {field.type === 'image' ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={editedValues[field.id] || ''}
-                          onChange={e => setEditedValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                          className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-xl px-3.5 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors font-mono"
-                          placeholder="URL de l'image..."
-                        />
-                        {editedValues[field.id] && (
-                          <div className="flex items-center gap-2 text-[10px] text-[#a1a1aa]">
-                            <ExternalLinkIcon className="w-3 h-3" />
-                            <span className="truncate">{editedValues[field.id]}</span>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <textarea
-                        value={editedValues[field.id] || ''}
-                        onChange={e => setEditedValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                        rows={field.value.length > 100 ? 4 : field.value.length > 50 ? 3 : 2}
-                        className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-xl px-3.5 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors resize-none"
-                        placeholder="Contenu..."
+                fields.map(field => {
+                  if (field.type === 'string') {
+                    return (
+                      <StringFieldEditor
+                        key={field.name}
+                        field={field}
+                        value={edited.strings[field.name] ?? field.value}
+                        onChange={v => updateString(field.name, v)}
                       />
-                    )}
-                    {editedValues[field.id] !== field.value && (
-                      <div className="mt-1 text-[9px] text-amber-400/80">Modifié</div>
-                    )}
-                  </div>
-                ))
+                    )
+                  }
+                  if (field.type === 'string_array') {
+                    return (
+                      <StringArrayFieldEditor
+                        key={field.name}
+                        field={field}
+                        items={edited.stringArrays[field.name] ?? field.items}
+                        onChange={v => updateStringArray(field.name, v)}
+                      />
+                    )
+                  }
+                  if (field.type === 'object_array') {
+                    return (
+                      <ObjectArrayFieldEditor
+                        key={field.name}
+                        field={field}
+                        items={edited.objectArrays[field.name] ?? field.items}
+                        onChange={v => updateObjectArray(field.name, v)}
+                      />
+                    )
+                  }
+                  return null
+                })
               )}
             </div>
           </>

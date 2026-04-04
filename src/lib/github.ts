@@ -31,16 +31,15 @@ async function githubFetch(url: string, options?: RequestInit) {
   return res.json()
 }
 
-const CMS_EXTENSIONS = ['.html', '.tsx', '.jsx']
-
-/** List all editable files (HTML, TSX, JSX) in a repo recursively */
-export async function listEditableFiles(repo: string, branch: string): Promise<{ name: string; path: string }[]> {
+/** Find the constants file (constants.ts or constants.tsx) in the repo */
+export async function findConstantsFile(repo: string, branch: string): Promise<string | null> {
   const tree = await githubFetch(
     `https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`
   )
-  return (tree.tree as GitHubFile[])
-    .filter((f: GitHubFile) => f.type === 'blob' && CMS_EXTENSIONS.some(ext => f.path.endsWith(ext)) && !f.path.includes('node_modules/'))
-    .map((f: GitHubFile) => ({ name: f.path.split('/').pop() || f.path, path: f.path }))
+  const file = (tree.tree as GitHubFile[]).find(
+    (f: GitHubFile) => f.type === 'blob' && /constants\.(ts|tsx)$/.test(f.path) && !f.path.includes('node_modules/')
+  )
+  return file?.path || null
 }
 
 /** Get decoded file content + sha (for updates) */
