@@ -318,31 +318,30 @@ function parseConstantsFile(content: string): ParsedSection[] {
 // ─── Labels ───
 
 function fieldLabel(constName: string, sectionKey: string): string {
-  const labels: Record<string, string> = {
-    SPECIALTIES: 'Spécialités', DIPLOMAS: 'Diplômes', ASSOCIATIONS: 'Associations',
-    WORKPLACES: 'Cabinets', TESTIMONIALS: 'Témoignages', PRICES: 'Tarifs',
-    FAQ_ITEMS: 'Questions fréquentes', SCHEDULE: 'Horaires', NAV_ITEMS: 'Liens de navigation',
-    IMPEDANCE_BENEFITS: 'Bénéfices',
-  }
-  if (labels[constName]) return labels[constName]
-
-  // Strip section prefix
+  // Strip section prefix (e.g. HERO_TITLE in section "hero" → TITLE)
   const prefix = sectionKey.toUpperCase().replace(/[^A-Z0-9]/g, '') + '_'
   let name = constName
   if (name.startsWith(prefix)) name = name.substring(prefix.length)
 
+  // Convert SCREAMING_SNAKE to Title Case
   return name.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
 }
 
+/** Common key translations for object fields (camelCase → French label) */
+const KEY_LABELS: Record<string, string> = {
+  label: 'Intitulé', price: 'Prix', title: 'Titre', description: 'Description',
+  question: 'Question', answer: 'Réponse', name: 'Nom', text: 'Texte',
+  address: 'Adresse', day: 'Jour', hours: 'Horaires', location: 'Lieu',
+  targetId: 'Ancre', mapUrl: 'Lien Maps', reviewUrl: 'Lien avis',
+  imageUrl: 'Image', image: 'Image', icon: 'Icône',
+  url: 'URL', link: 'Lien', email: 'Email', phone: 'Téléphone',
+  subtitle: 'Sous-titre', content: 'Contenu', category: 'Catégorie',
+  date: 'Date', time: 'Heure', author: 'Auteur', role: 'Rôle',
+  company: 'Entreprise', city: 'Ville', country: 'Pays',
+}
+
 function keyLabel(key: string): string {
-  const labels: Record<string, string> = {
-    label: 'Intitulé', price: 'Prix', title: 'Titre', description: 'Description',
-    question: 'Question', answer: 'Réponse', name: 'Nom', text: 'Texte',
-    address: 'Adresse', day: 'Jour', hours: 'Horaires', location: 'Lieu',
-    targetId: 'Ancre', mapUrl: 'Lien Google Maps', reviewUrl: 'Lien avis Google',
-    imageUrl: 'Image', image: 'Image', icon: 'Icône',
-  }
-  return labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
+  return KEY_LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
 }
 
 // ─── Public actions ───
