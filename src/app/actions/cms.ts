@@ -200,10 +200,10 @@ function parseConstantsFile(content: string): ParsedSection[] {
     if (line.includes('React.ReactNode')) continue
     if (/=\s*\{/.test(line) && !line.includes('[')) continue
 
-    // new URL("path", import.meta.url) → editable as string (path only)
-    const urlMatch = line.match(/^export const \w+[^=]*=\s*new URL\(\s*"((?:[^"\\]|\\.)*)"\s*,/)
+    // new URL("path", import.meta.url) or new URL("path", import.meta.url).href
+    const urlMatch = line.match(/^export const \w+[^=]*=\s*new URL\(\s*["']([^"']+)["']\s*,/)
     if (urlMatch) {
-      current.fields.push({ name, type: 'string', value: urlMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') })
+      current.fields.push({ name, type: 'string', value: urlMatch[1] })
       continue
     }
 
@@ -283,6 +283,14 @@ function parseConstantsFile(content: string): ParsedSection[] {
             allKeys.add(btMatch[1])
           }
 
+          // Extract new URL("path", ...) fields: key: new URL("path", import.meta.url).href
+          const urlFieldRegex = /(\w+)\s*:\s*new URL\(\s*["']([^"']+)["']\s*,/g
+          let urlFieldMatch
+          while ((urlFieldMatch = urlFieldRegex.exec(objText)) !== null) {
+            item[urlFieldMatch[1]] = urlFieldMatch[2]
+            allKeys.add(urlFieldMatch[1])
+          }
+
           if (Object.keys(item).length > 0) items.push(item)
         }
 
@@ -332,6 +340,7 @@ function keyLabel(key: string): string {
     question: 'Question', answer: 'Réponse', name: 'Nom', text: 'Texte',
     address: 'Adresse', day: 'Jour', hours: 'Horaires', location: 'Lieu',
     targetId: 'Ancre', mapUrl: 'Lien Google Maps', reviewUrl: 'Lien avis Google',
+    imageUrl: 'Image', image: 'Image', icon: 'Icône',
   }
   return labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
 }
@@ -388,10 +397,10 @@ function escapeForDoubleQuote(s: string): string {
 }
 
 function applyStringUpdate(content: string, name: string, newValue: string): string {
-  // new URL("path", import.meta.url)
-  const urlRegex = new RegExp(`(export const ${name}[^=]*=\\s*new URL\\(\\s*)"(?:[^"\\\\]|\\\\.)*"`)
+  // new URL("path", import.meta.url) or new URL('path', ...).href
+  const urlRegex = new RegExp(`(export const ${name}[^=]*=\\s*new URL\\(\\s*)["'][^"']+["']`)
   if (urlRegex.test(content)) {
-    return content.replace(urlRegex, `$1"${escapeForDoubleQuote(newValue)}"`)
+    return content.replace(urlRegex, `$1'${newValue.replace(/'/g, "\\'")}'`)
   }
   // Double-quoted string
   const dqRegex = new RegExp(`(export const ${name}[^=]*=\\s*)"(?:[^"\\\\]|\\\\.)*"`)
@@ -484,6 +493,12 @@ function applyObjectArrayUpdate(
         } else {
           objText = objText.replace(btFieldRegex, `$1"${escapeForDoubleQuote(newVal)}"`)
         }
+        continue
+      }
+      // Try new URL("path", ...) field
+      const urlFieldRegex = new RegExp(`(${key}:\\s*new URL\\(\\s*)["'][^"']+["']`)
+      if (urlFieldRegex.test(objText)) {
+        objText = objText.replace(urlFieldRegex, `$1'${newVal.replace(/'/g, "\\'")}'`)
       }
     }
 
