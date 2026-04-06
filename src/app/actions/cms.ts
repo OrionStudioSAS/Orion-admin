@@ -196,10 +196,16 @@ function parseConstantsFile(content: string): ParsedSection[] {
     if (!exportMatch) continue
     const name = exportMatch[1]
 
-    // Skip React.ReactNode, new URL, object literals (LOGO_COLORS)
+    // Skip React.ReactNode, object literals (LOGO_COLORS)
     if (line.includes('React.ReactNode')) continue
-    if (/=\s*new URL\(/.test(line)) continue
     if (/=\s*\{/.test(line) && !line.includes('[')) continue
+
+    // new URL("path", import.meta.url) → editable as string (path only)
+    const urlMatch = line.match(/^export const \w+[^=]*=\s*new URL\(\s*"((?:[^"\\]|\\.)*)"\s*,/)
+    if (urlMatch) {
+      current.fields.push({ name, type: 'string', value: urlMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') })
+      continue
+    }
 
     // Simple string: export const NAME = "value";
     const dqMatch = line.match(/^export const \w+[^=]*=\s*"((?:[^"\\]|\\.)*)"\s*;/)
@@ -332,38 +338,47 @@ function keyLabel(key: string): string {
 
 // ─── Public actions ───
 
-export async function getCmsSections(siteId: string): Promise<CmsSection[]> {
+export interface CmsAllData {
+  sections: { section: CmsSection; fields: CmsField[] }[]
+}
+
+export async function getAllCmsData(siteId: string): Promise<CmsAllData> {
   const { content } = await loadConstants(siteId)
-  const sections = parseConstantsFile(content)
-  return sections.filter(s => s.fields.length > 0).map(s => ({ name: s.name, key: s.key }))
+  const parsed = parseConstantsFile(content)
+
+  const sections = parsed.filter(s => s.fields.length > 0).map(s => {
+    const fields: CmsField[] = s.fields.map(f => {
+      if (f.type === 'string') {
+        return { name: f.name, label: fieldLabel(f.name, s.key), type: 'string' as const, value: f.value as string }
+      }
+      if (f.type === 'string_array') {
+        return { name: f.name, label: fieldLabel(f.name, s.key), type: 'string_array' as const, items: f.value as string[] }
+      }
+      const keys = f.keys || []
+      return {
+        name: f.name,
+        label: fieldLabel(f.name, s.key),
+        type: 'object_array' as const,
+        keys,
+        keyLabels: keys.map(k => keyLabel(k)),
+        items: f.value as Record<string, string>[],
+      }
+    })
+    return { section: { name: s.name, key: s.key }, fields }
+  })
+
+  return { sections }
+}
+
+export async function getCmsSections(siteId: string): Promise<CmsSection[]> {
+  const data = await getAllCmsData(siteId)
+  return data.sections.map(s => s.section)
 }
 
 export async function getCmsSectionFields(siteId: string, sectionKey: string): Promise<CmsSectionData> {
-  const { content } = await loadConstants(siteId)
-  const sections = parseConstantsFile(content)
-  const section = sections.find(s => s.key === sectionKey)
-  if (!section) return { fields: [] }
-
-  const fields: CmsField[] = section.fields.map(f => {
-    if (f.type === 'string') {
-      return { name: f.name, label: fieldLabel(f.name, sectionKey), type: 'string' as const, value: f.value as string }
-    }
-    if (f.type === 'string_array') {
-      return { name: f.name, label: fieldLabel(f.name, sectionKey), type: 'string_array' as const, items: f.value as string[] }
-    }
-    // object_array
-    const keys = f.keys || []
-    return {
-      name: f.name,
-      label: fieldLabel(f.name, sectionKey),
-      type: 'object_array' as const,
-      keys,
-      keyLabels: keys.map(k => keyLabel(k)),
-      items: f.value as Record<string, string>[],
-    }
-  })
-
-  return { fields }
+  const data = await getAllCmsData(siteId)
+  const section = data.sections.find(s => s.section.key === sectionKey)
+  return { fields: section?.fields || [] }
 }
 
 // ─── Update ───
@@ -373,6 +388,11 @@ function escapeForDoubleQuote(s: string): string {
 }
 
 function applyStringUpdate(content: string, name: string, newValue: string): string {
+  // new URL("path", import.meta.url)
+  const urlRegex = new RegExp(`(export const ${name}[^=]*=\\s*new URL\\(\\s*)"(?:[^"\\\\]|\\\\.)*"`)
+  if (urlRegex.test(content)) {
+    return content.replace(urlRegex, `$1"${escapeForDoubleQuote(newValue)}"`)
+  }
   // Double-quoted string
   const dqRegex = new RegExp(`(export const ${name}[^=]*=\\s*)"(?:[^"\\\\]|\\\\.)*"`)
   if (dqRegex.test(content)) {
