@@ -73,3 +73,32 @@ export async function updateFileContent(
     }
   )
 }
+
+/** Get file sha if it exists, null otherwise */
+export async function getFileSha(repo: string, branch: string, path: string): Promise<string | null> {
+  try {
+    const data = await githubFetch(
+      `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`
+    )
+    return data.sha || null
+  } catch {
+    return null
+  }
+}
+
+/** Upload a binary file (base64-encoded content) and commit */
+export async function uploadBinaryFile(
+  repo: string,
+  branch: string,
+  path: string,
+  base64Content: string,
+  message: string,
+  existingSha?: string | null
+): Promise<void> {
+  const body: Record<string, string> = { message, content: base64Content, branch }
+  if (existingSha) body.sha = existingSha
+  await githubFetch(
+    `https://api.github.com/repos/${repo}/contents/${path}`,
+    { method: 'PUT', body: JSON.stringify(body) }
+  )
+}

@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon } from '@/components/ui/Icons'
+import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon, UploadIcon } from '@/components/ui/Icons'
 import {
   ClientSite, CmsSection, CmsField, CmsStringField, CmsStringArrayField, CmsObjectArrayField,
   CmsFieldUpdate, CmsAllData,
-  addSite, removeSite, getAllCmsData, updateCmsFields
+  addSite, removeSite, getAllCmsData, updateCmsFields, uploadCmsImage, getCmsImageUrls
 } from '@/app/actions/cms'
 
 interface ProjectInfo {
@@ -68,38 +68,102 @@ function isImageValue(value: string): boolean {
 
 // ─── Field renderers ───
 
+function ImageFieldEditor({ field, value, onChange, previewUrl, siteId, onUploaded }: {
+  field: CmsStringField; value: string; onChange: (v: string) => void
+  previewUrl?: string; siteId: string; onUploaded: (newPath: string, localPreview: string) => void
+}) {
+  const changed = value !== field.value
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [localPreview, setLocalPreview] = useState<string | null>(null)
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      // Read as base64
+      const buffer = await file.arrayBuffer()
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      // Local preview
+      const preview = URL.createObjectURL(file)
+      setLocalPreview(preview)
+      // Upload to GitHub
+      const result = await uploadCmsImage(siteId, file.name, base64)
+      if (result.success && result.path) {
+        onChange(result.path)
+        onUploaded(result.path, preview)
+      }
+    } catch {
+      // noop
+    }
+    setUploading(false)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const displayUrl = localPreview || previewUrl
+  return (
+    <div>
+      <label className="text-xs font-medium text-white mb-1.5 block">{field.label}</label>
+      <div className="flex gap-3 items-start">
+        {/* Preview */}
+        <div
+          className="w-24 h-24 rounded-xl border border-[#1e1e1e] overflow-hidden bg-[#0a0a0a] shrink-0 flex items-center justify-center cursor-pointer hover:border-white/20 transition-colors relative group"
+          onClick={() => fileRef.current?.click()}
+        >
+          {displayUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={displayUrl} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <UploadIcon className="w-5 h-5 text-white" />
+              </div>
+            </>
+          ) : (
+            <div className="text-center">
+              <UploadIcon className="w-5 h-5 text-[#52525b] mx-auto mb-1" />
+              <span className="text-[9px] text-[#52525b]">Image</span>
+            </div>
+          )}
+          {uploading && (
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+              <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+        {/* Path + upload button */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="text-[10px] text-[#52525b] font-mono truncate">{value}</div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 text-[11px] text-[#a1a1aa] hover:text-white px-3 py-1.5 rounded-lg border border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer disabled:opacity-30"
+          >
+            <UploadIcon className="w-3.5 h-3.5" />
+            {uploading ? 'Envoi...' : 'Remplacer l\'image'}
+          </button>
+          {changed && <div className="text-[9px] text-amber-400/80">Modifié</div>}
+        </div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+    </div>
+  )
+}
+
 function StringFieldEditor({ field, value, onChange }: { field: CmsStringField; value: string; onChange: (v: string) => void }) {
   const changed = value !== field.value
-  const isImage = isImageValue(value) || isImageValue(field.value)
   const rows = value.length > 200 ? 5 : value.length > 100 ? 4 : value.length > 50 ? 3 : 2
   return (
     <div>
       <label className="text-xs font-medium text-white mb-1.5 block">{field.label}</label>
-      {isImage ? (
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-xl px-3.5 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors font-mono text-xs"
-            placeholder="Chemin ou URL de l'image..."
-          />
-          {value && /^https?:\/\//.test(value) && (
-            <div className="w-20 h-20 rounded-lg border border-[#1e1e1e] overflow-hidden bg-[#0a0a0a]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={value} alt="" className="w-full h-full object-cover" />
-            </div>
-          )}
-        </div>
-      ) : (
-        <textarea
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          rows={rows}
-          className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-xl px-3.5 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors resize-none"
-          placeholder="Contenu..."
-        />
-      )}
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={rows}
+        className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-sm rounded-xl px-3.5 py-2.5 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors resize-none"
+        placeholder="Contenu..."
+      />
       {changed && <div className="mt-1 text-[9px] text-amber-400/80">Modifié</div>}
     </div>
   )
@@ -250,6 +314,7 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const [addingError, setAddingError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({})
   const repoRef = useRef<HTMLInputElement>(null)
 
   const selectedSite = sites.find(s => s.id === selectedSiteId)
@@ -264,18 +329,38 @@ export default function CmsPanel({ initialSites, projects }: Props) {
     setAllData(null)
     setSelectedSection(null)
     setEditedPerSection({})
+    setImageUrls({})
     try {
       const data = await getAllCmsData(siteId)
       setAllData(data)
       // Build edited state for all sections
       const editedMap: Record<string, EditedState> = {}
+      const allImagePaths: string[] = []
       for (const s of data.sections) {
         editedMap[s.section.key] = buildInitialEdited(s.fields)
+        // Collect image paths for preview
+        for (const f of s.fields) {
+          if (f.type === 'string' && isImageValue(f.value)) {
+            allImagePaths.push(f.value)
+          }
+          if (f.type === 'object_array') {
+            for (const item of f.items) {
+              for (const val of Object.values(item)) {
+                if (isImageValue(val)) allImagePaths.push(val)
+              }
+            }
+          }
+        }
       }
       setEditedPerSection(editedMap)
       // Auto-select first section
       if (data.sections.length > 0) {
         setSelectedSection(data.sections[0].section.key)
+      }
+      // Load image preview URLs
+      if (allImagePaths.length > 0) {
+        const urls = await getCmsImageUrls(siteId, allImagePaths)
+        setImageUrls(urls)
       }
     } catch {
       // noop
@@ -584,11 +669,27 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               ) : (
                 currentFields.map(field => {
                   if (field.type === 'string') {
+                    const val = currentEdited?.strings[field.name] ?? field.value
+                    if (isImageValue(val) || isImageValue(field.value)) {
+                      return (
+                        <ImageFieldEditor
+                          key={field.name}
+                          field={field}
+                          value={val}
+                          onChange={v => updateString(field.name, v)}
+                          previewUrl={imageUrls[val] || imageUrls[field.value]}
+                          siteId={selectedSiteId!}
+                          onUploaded={(newPath, localPreview) => {
+                            setImageUrls(prev => ({ ...prev, [newPath]: localPreview }))
+                          }}
+                        />
+                      )
+                    }
                     return (
                       <StringFieldEditor
                         key={field.name}
                         field={field}
-                        value={currentEdited?.strings[field.name] ?? field.value}
+                        value={val}
                         onChange={v => updateString(field.name, v)}
                       />
                     )

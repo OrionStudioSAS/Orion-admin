@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { findConstantsFile, getFileContent, updateFileContent } from '@/lib/github'
+import { findConstantsFile, getFileContent, updateFileContent, getFileSha, uploadBinaryFile } from '@/lib/github'
 
 // ─── Auth ───
 
@@ -541,5 +541,104 @@ export async function updateCmsFields(
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Erreur inconnue' }
+  }
+}
+
+// ─── Image upload ───
+
+/**
+ * Upload an image to the repo assets folder, returns the relative path (e.g. ./assets/filename.jpg).
+ * The base64Data should NOT include the data:... prefix.
+ */
+export async function uploadCmsImage(
+  siteId: string,
+  fileName: string,
+  base64Data: string
+): Promise<{ success: boolean; path?: string; error?: string }> {
+  try {
+    await requireAuth()
+    const site = await getSiteById(siteId)
+    const repo = site.github_repo as string
+    const branch = site.github_branch as string
+
+    // Find the constants file to determine the assets folder relative path
+    const constPath = await findConstantsFile(repo, branch)
+    if (!constPath) throw new Error('Fichier constants introuvable')
+
+    // Assets folder is next to constants file
+    const constDir = constPath.includes('/') ? constPath.substring(0, constPath.lastIndexOf('/')) : ''
+    const assetsDir = constDir ? `${constDir}/assets` : 'assets'
+
+    // Sanitize filename
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase()
+    const filePath = `${assetsDir}/${safeName}`
+
+    // Check if file already exists (need sha to overwrite)
+    const existingSha = await getFileSha(repo, branch, filePath)
+
+    // Upload
+    await uploadBinaryFile(repo, branch, filePath, base64Data, `cms: upload ${safeName}`, existingSha)
+
+    return { success: true, path: `./assets/${safeName}` }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inconnue' }
+  }
+}
+
+/**
+ * Get the raw GitHub URL for an asset in the repo (for preview).
+ */
+export async function getCmsImageUrl(
+  siteId: string,
+  relativePath: string
+): Promise<string | null> {
+  try {
+    await requireAuth()
+    const site = await getSiteById(siteId)
+    const repo = site.github_repo as string
+    const branch = site.github_branch as string
+
+    const constPath = await findConstantsFile(repo, branch)
+    if (!constPath) return null
+
+    const constDir = constPath.includes('/') ? constPath.substring(0, constPath.lastIndexOf('/')) : ''
+    // relativePath is like ./assets/logo.jpeg → strip ./
+    const cleanRelative = relativePath.replace(/^\.\//, '')
+    const fullPath = constDir ? `${constDir}/${cleanRelative}` : cleanRelative
+
+    return `https://raw.githubusercontent.com/${repo}/${branch}/${fullPath}`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve all image paths in a section to preview URLs (batch).
+ */
+export async function getCmsImageUrls(
+  siteId: string,
+  relativePaths: string[]
+): Promise<Record<string, string>> {
+  try {
+    await requireAuth()
+    const site = await getSiteById(siteId)
+    const repo = site.github_repo as string
+    const branch = site.github_branch as string
+
+    const constPath = await findConstantsFile(repo, branch)
+    if (!constPath) return {}
+
+    const constDir = constPath.includes('/') ? constPath.substring(0, constPath.lastIndexOf('/')) : ''
+    const result: Record<string, string> = {}
+
+    for (const relPath of relativePaths) {
+      const cleanRelative = relPath.replace(/^\.\//, '')
+      const fullPath = constDir ? `${constDir}/${cleanRelative}` : cleanRelative
+      // Add cache-buster to avoid stale images after upload
+      result[relPath] = `https://raw.githubusercontent.com/${repo}/${branch}/${fullPath}?t=${Date.now()}`
+    }
+    return result
+  } catch {
+    return {}
   }
 }
