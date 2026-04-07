@@ -88,23 +88,6 @@ export interface TranslationAllData {
   sections: TranslationSectionData[]
 }
 
-export const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
-  { code: 'en', label: 'English' },
-  { code: 'es', label: 'Español' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'it', label: 'Italiano' },
-  { code: 'pt', label: 'Português' },
-  { code: 'nl', label: 'Nederlands' },
-  { code: 'ar', label: 'العربية' },
-  { code: 'zh', label: '中文' },
-  { code: 'ja', label: '日本語' },
-  { code: 'ko', label: '한국어' },
-  { code: 'ru', label: 'Русский' },
-  { code: 'pl', label: 'Polski' },
-  { code: 'tr', label: 'Türkçe' },
-  { code: 'ro', label: 'Română' },
-]
-
 // ─── Sites CRUD ───
 
 export async function getSites(): Promise<ClientSite[]> {

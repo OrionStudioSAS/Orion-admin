@@ -4,10 +4,27 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon, UploadIcon } from '@/components/ui/Icons'
 import {
   ClientSite, CmsSection, CmsField, CmsStringField, CmsStringArrayField, CmsObjectArrayField,
-  CmsFieldUpdate, CmsAllData, TranslationAllData, TranslationPair, AVAILABLE_LANGUAGES,
+  CmsFieldUpdate, CmsAllData, TranslationAllData,
   addSite, removeSite, getAllCmsData, updateCmsFields, uploadCmsImage, getCmsImageUrls,
   getExistingTranslations, getTranslationData, initTranslation, updateTranslationFields
 } from '@/app/actions/cms'
+
+const AVAILABLE_LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'it', label: 'Italiano' },
+  { code: 'pt', label: 'Português' },
+  { code: 'nl', label: 'Nederlands' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'ko', label: '한국어' },
+  { code: 'ru', label: 'Русский' },
+  { code: 'pl', label: 'Polski' },
+  { code: 'tr', label: 'Türkçe' },
+  { code: 'ro', label: 'Română' },
+]
 
 interface ProjectInfo {
   id: string
