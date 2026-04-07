@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon, UploadIcon } from '@/components/ui/Icons'
 import {
   ClientSite, CmsSection, CmsField, CmsStringField, CmsStringArrayField, CmsObjectArrayField,
-  CmsFieldUpdate, CmsAllData,
-  addSite, removeSite, getAllCmsData, updateCmsFields, uploadCmsImage, getCmsImageUrls
+  CmsFieldUpdate, CmsAllData, TranslationAllData, TranslationPair, AVAILABLE_LANGUAGES,
+  addSite, removeSite, getAllCmsData, updateCmsFields, uploadCmsImage, getCmsImageUrls,
+  getExistingTranslations, getTranslationData, initTranslation, updateTranslationFields
 } from '@/app/actions/cms'
 
 interface ProjectInfo {
@@ -317,11 +318,32 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({})
   const repoRef = useRef<HTMLInputElement>(null)
 
+  // Translation state
+  const [mode, setMode] = useState<'content' | 'translation'>('content')
+  const [translationLang, setTranslationLang] = useState<string | null>(null)
+  const [existingLangs, setExistingLangs] = useState<string[]>([])
+  const [translationData, setTranslationData] = useState<TranslationAllData | null>(null)
+  const [translationEdited, setTranslationEdited] = useState<Record<string, EditedState>>({})
+  const [initializingLang, setInitializingLang] = useState(false)
+
   const selectedSite = sites.find(s => s.id === selectedSiteId)
-  const currentSectionData = allData?.sections.find(s => s.section.key === selectedSection)
+  const currentSectionData = mode === 'content'
+    ? allData?.sections.find(s => s.section.key === selectedSection)
+    : null
   const currentFields = currentSectionData?.fields || []
   const currentEdited = selectedSection ? editedPerSection[selectedSection] : undefined
   const hasChanges = currentEdited ? hasAnyChanges(currentFields, currentEdited) : false
+
+  // Translation derived state
+  const currentTranslationSection = mode === 'translation'
+    ? translationData?.sections.find(s => s.section.key === selectedSection)
+    : null
+  const currentTranslationEdited = selectedSection ? translationEdited[selectedSection] : undefined
+  const translationFields = currentTranslationSection?.pairs
+    .filter(p => p.translatedField)
+    .map(p => p.translatedField!) || []
+  const hasTranslationChanges = currentTranslationEdited
+    ? hasAnyChanges(translationFields, currentTranslationEdited) : false
 
   // Load all data when site changes
   const loadSiteData = useCallback(async (siteId: string) => {
@@ -330,6 +352,10 @@ export default function CmsPanel({ initialSites, projects }: Props) {
     setSelectedSection(null)
     setEditedPerSection({})
     setImageUrls({})
+    setMode('content')
+    setTranslationLang(null)
+    setTranslationData(null)
+    setTranslationEdited({})
     try {
       const data = await getAllCmsData(siteId)
       setAllData(data)
@@ -362,6 +388,9 @@ export default function CmsPanel({ initialSites, projects }: Props) {
         const urls = await getCmsImageUrls(siteId, allImagePaths)
         setImageUrls(urls)
       }
+      // Load existing translation languages
+      const langs = await getExistingTranslations(siteId)
+      setExistingLangs(langs)
     } catch {
       // noop
     }
@@ -400,6 +429,84 @@ export default function CmsPanel({ initialSites, projects }: Props) {
       [selectedSection]: { ...prev[selectedSection], objectArrays: { ...prev[selectedSection].objectArrays, [name]: value } }
     }))
   }, [selectedSection])
+
+  // Translation handlers
+  const loadTranslation = useCallback(async (lang: string) => {
+    if (!selectedSiteId) return
+    setTranslationData(null)
+    setTranslationEdited({})
+    const data = await getTranslationData(selectedSiteId, lang)
+    setTranslationData(data)
+    // Build edited state from translated fields
+    const editedMap: Record<string, EditedState> = {}
+    for (const s of data.sections) {
+      const fields = s.pairs.filter(p => p.translatedField).map(p => p.translatedField!)
+      editedMap[s.section.key] = buildInitialEdited(fields)
+    }
+    setTranslationEdited(editedMap)
+    if (!selectedSection && data.sections.length > 0) {
+      setSelectedSection(data.sections[0].section.key)
+    }
+  }, [selectedSiteId, selectedSection])
+
+  async function handleSelectLang(lang: string) {
+    setTranslationLang(lang)
+    if (!existingLangs.includes(lang)) {
+      // Initialize translation
+      setInitializingLang(true)
+      const result = await initTranslation(selectedSiteId!, lang)
+      setInitializingLang(false)
+      if (!result.success) {
+        setSaveError(result.error || 'Erreur lors de l\'initialisation')
+        setTimeout(() => setSaveError(''), 5000)
+        return
+      }
+      setExistingLangs(prev => [...prev, lang])
+    }
+    await loadTranslation(lang)
+  }
+
+  const updateTranslationString = useCallback((name: string, value: string) => {
+    if (!selectedSection) return
+    setTranslationEdited(prev => ({
+      ...prev,
+      [selectedSection]: { ...prev[selectedSection], strings: { ...prev[selectedSection].strings, [name]: value } }
+    }))
+  }, [selectedSection])
+
+  const updateTranslationStringArray = useCallback((name: string, value: string[]) => {
+    if (!selectedSection) return
+    setTranslationEdited(prev => ({
+      ...prev,
+      [selectedSection]: { ...prev[selectedSection], stringArrays: { ...prev[selectedSection].stringArrays, [name]: value } }
+    }))
+  }, [selectedSection])
+
+  const updateTranslationObjectArray = useCallback((name: string, value: Record<string, string>[]) => {
+    if (!selectedSection) return
+    setTranslationEdited(prev => ({
+      ...prev,
+      [selectedSection]: { ...prev[selectedSection], objectArrays: { ...prev[selectedSection].objectArrays, [name]: value } }
+    }))
+  }, [selectedSection])
+
+  async function handleSaveTranslation() {
+    if (!selectedSiteId || !selectedSection || !translationLang || !currentTranslationEdited || !hasTranslationChanges) return
+    setSaving(true)
+    setSaveSuccess(false)
+    const updates = buildUpdates(translationFields, currentTranslationEdited)
+    const result = await updateTranslationFields(selectedSiteId, translationLang, selectedSection, updates)
+    setSaving(false)
+    if (!result.success) {
+      setSaveError(result.error || 'Erreur lors de la publication')
+      setTimeout(() => setSaveError(''), 5000)
+      return
+    }
+    setSaveSuccess(true)
+    // Reload translation data
+    await loadTranslation(translationLang)
+    setTimeout(() => setSaveSuccess(false), 3000)
+  }
 
   async function handleAddSite() {
     if (!newProjectId || !newRepo.trim()) return
@@ -615,109 +722,244 @@ export default function CmsPanel({ initialSites, projects }: Props) {
           </div>
         ) : (
           <>
-            {/* Section header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e1e1e] shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <DocumentIcon className="w-4 h-4 text-[#a1a1aa] shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-white truncate">
-                    {currentSectionData?.section.name || selectedSection}
-                  </div>
-                  <div className="text-[10px] text-[#52525b]">{selectedSite?.project_name || selectedSite?.github_repo}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {saveError && (
-                  <span className="text-[10px] text-red-400 max-w-[200px] truncate">{saveError}</span>
-                )}
-                {hasChanges && (
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="flex items-center gap-1.5 text-[11px] text-[#a1a1aa] hover:text-white px-3 py-1.5 rounded-lg border border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer"
-                  >
-                    <XIcon className="w-3 h-3" />
-                    Annuler
-                  </button>
-                )}
+            {/* Mode tabs + Section header */}
+            <div className="border-b border-[#1e1e1e] shrink-0">
+              {/* Tabs */}
+              <div className="flex items-center gap-0 px-5 pt-2">
                 <button
                   type="button"
-                  onClick={handleSave}
-                  disabled={!hasChanges || saving}
-                  className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all cursor-pointer
-                    ${saveSuccess
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                      : 'bg-white text-black hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed'
-                    }`}
+                  onClick={() => setMode('content')}
+                  className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-all cursor-pointer
+                    ${mode === 'content' ? 'text-white border-white' : 'text-[#52525b] border-transparent hover:text-[#a1a1aa]'}`}
                 >
-                  {saving ? (
-                    <div className="w-3 h-3 border-2 border-black/20 border-t-black/60 rounded-full animate-spin" />
-                  ) : (
-                    <CheckIcon className="w-3 h-3" />
-                  )}
-                  {saving ? 'Envoi...' : saveSuccess ? 'Publié !' : 'Publier'}
+                  Contenu
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('translation'); if (translationLang) loadTranslation(translationLang) }}
+                  className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-all cursor-pointer
+                    ${mode === 'translation' ? 'text-white border-white' : 'text-[#52525b] border-transparent hover:text-[#a1a1aa]'}`}
+                >
+                  Traductions
+                </button>
+              </div>
+
+              {/* Header bar */}
+              <div className="flex items-center justify-between px-5 py-2.5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <DocumentIcon className="w-4 h-4 text-[#a1a1aa] shrink-0" />
+                  <div className="text-sm font-medium text-white truncate">
+                    {(mode === 'content' ? currentSectionData?.section.name : currentTranslationSection?.section.name) || selectedSection}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {saveError && <span className="text-[10px] text-red-400 max-w-[200px] truncate">{saveError}</span>}
+
+                  {mode === 'translation' && (
+                    <select
+                      value={translationLang || ''}
+                      onChange={e => e.target.value && handleSelectLang(e.target.value)}
+                      disabled={initializingLang}
+                      className="bg-[#0a0a0a] border border-[#1e1e1e] text-white text-[11px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-white/30 cursor-pointer"
+                    >
+                      <option value="">Langue...</option>
+                      {AVAILABLE_LANGUAGES.map(l => (
+                        <option key={l.code} value={l.code}>
+                          {l.label} {existingLangs.includes(l.code) ? '' : '(nouveau)'}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {mode === 'content' && hasChanges && (
+                    <button type="button" onClick={handleReset}
+                      className="flex items-center gap-1.5 text-[11px] text-[#a1a1aa] hover:text-white px-3 py-1.5 rounded-lg border border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer">
+                      <XIcon className="w-3 h-3" /> Annuler
+                    </button>
+                  )}
+                  {mode === 'translation' && hasTranslationChanges && (
+                    <button type="button" onClick={() => {
+                      if (!selectedSection) return
+                      setTranslationEdited(prev => ({ ...prev, [selectedSection]: buildInitialEdited(translationFields) }))
+                    }}
+                      className="flex items-center gap-1.5 text-[11px] text-[#a1a1aa] hover:text-white px-3 py-1.5 rounded-lg border border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer">
+                      <XIcon className="w-3 h-3" /> Annuler
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={mode === 'content' ? handleSave : handleSaveTranslation}
+                    disabled={mode === 'content' ? (!hasChanges || saving) : (!hasTranslationChanges || saving)}
+                    className={`flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all cursor-pointer
+                      ${saveSuccess
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-white text-black hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed'}`}
+                  >
+                    {saving ? <div className="w-3 h-3 border-2 border-black/20 border-t-black/60 rounded-full animate-spin" />
+                      : <CheckIcon className="w-3 h-3" />}
+                    {saving ? 'Envoi...' : saveSuccess ? 'Publié !' : 'Publier'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Fields */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {currentFields.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-[#a1a1aa] text-sm">Aucun champ modifiable</p>
-                </div>
-              ) : (
-                currentFields.map(field => {
-                  if (field.type === 'string') {
-                    const val = currentEdited?.strings[field.name] ?? field.value
-                    if (isImageValue(val) || isImageValue(field.value)) {
-                      return (
-                        <ImageFieldEditor
-                          key={field.name}
-                          field={field}
-                          value={val}
-                          onChange={v => updateString(field.name, v)}
-                          previewUrl={imageUrls[val] || imageUrls[field.value]}
-                          siteId={selectedSiteId!}
-                          onUploaded={(newPath, localPreview) => {
-                            setImageUrls(prev => ({ ...prev, [newPath]: localPreview }))
-                          }}
-                        />
-                      )
+            {/* Content mode */}
+            {mode === 'content' && (
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {currentFields.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-[#a1a1aa] text-sm">Aucun champ modifiable</p>
+                  </div>
+                ) : (
+                  currentFields.map(field => {
+                    if (field.type === 'string') {
+                      const val = currentEdited?.strings[field.name] ?? field.value
+                      if (isImageValue(val) || isImageValue(field.value)) {
+                        return (
+                          <ImageFieldEditor key={field.name} field={field} value={val}
+                            onChange={v => updateString(field.name, v)}
+                            previewUrl={imageUrls[val] || imageUrls[field.value]}
+                            siteId={selectedSiteId!}
+                            onUploaded={(newPath, localPreview) => setImageUrls(prev => ({ ...prev, [newPath]: localPreview }))}
+                          />
+                        )
+                      }
+                      return <StringFieldEditor key={field.name} field={field} value={val} onChange={v => updateString(field.name, v)} />
                     }
-                    return (
-                      <StringFieldEditor
-                        key={field.name}
-                        field={field}
-                        value={val}
-                        onChange={v => updateString(field.name, v)}
-                      />
-                    )
-                  }
-                  if (field.type === 'string_array') {
-                    return (
-                      <StringArrayFieldEditor
-                        key={field.name}
-                        field={field}
+                    if (field.type === 'string_array') {
+                      return <StringArrayFieldEditor key={field.name} field={field}
                         items={currentEdited?.stringArrays[field.name] ?? field.items}
-                        onChange={v => updateStringArray(field.name, v)}
-                      />
-                    )
-                  }
-                  if (field.type === 'object_array') {
-                    return (
-                      <ObjectArrayFieldEditor
-                        key={field.name}
-                        field={field}
+                        onChange={v => updateStringArray(field.name, v)} />
+                    }
+                    if (field.type === 'object_array') {
+                      return <ObjectArrayFieldEditor key={field.name} field={field}
                         items={currentEdited?.objectArrays[field.name] ?? field.items}
-                        onChange={v => updateObjectArray(field.name, v)}
-                      />
+                        onChange={v => updateObjectArray(field.name, v)} />
+                    }
+                    return null
+                  })
+                )}
+              </div>
+            )}
+
+            {/* Translation mode */}
+            {mode === 'translation' && (
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {initializingLang ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin mb-3" />
+                    <p className="text-[#a1a1aa] text-sm">Initialisation de la traduction...</p>
+                  </div>
+                ) : !translationLang ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-[#a1a1aa] text-sm">Sélectionnez une langue</p>
+                    <p className="text-[#52525b] text-xs mt-1">Choisissez la langue cible dans le menu ci-dessus</p>
+                  </div>
+                ) : !currentTranslationSection ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                  </div>
+                ) : currentTranslationSection.pairs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-[#a1a1aa] text-sm">Aucun champ traductible</p>
+                  </div>
+                ) : (
+                  currentTranslationSection.pairs.map(pair => {
+                    const base = pair.baseField
+                    const trans = pair.translatedField
+                    if (!trans) return null
+
+                    return (
+                      <div key={base.name} className="border border-[#1e1e1e] rounded-xl overflow-hidden">
+                        <div className="px-3.5 py-2 bg-[#080808] border-b border-[#1e1e1e]">
+                          <span className="text-[10px] font-medium text-[#a1a1aa]">{base.label}</span>
+                        </div>
+                        <div className="grid grid-cols-2 divide-x divide-[#1e1e1e]">
+                          {/* French original (read-only) */}
+                          <div className="p-3">
+                            <div className="text-[9px] text-[#52525b] mb-1 uppercase tracking-wider">Français</div>
+                            {base.type === 'string' && (
+                              <div className="text-xs text-[#a1a1aa] whitespace-pre-wrap bg-[#0a0a0a] rounded-lg px-3 py-2 border border-[#1e1e1e]">
+                                {base.value}
+                              </div>
+                            )}
+                            {base.type === 'string_array' && (
+                              <div className="space-y-1">
+                                {base.items.map((item, i) => (
+                                  <div key={i} className="text-xs text-[#a1a1aa] bg-[#0a0a0a] rounded-lg px-3 py-1.5 border border-[#1e1e1e]">{item}</div>
+                                ))}
+                              </div>
+                            )}
+                            {base.type === 'object_array' && (
+                              <div className="space-y-1.5">
+                                {base.items.map((item, i) => (
+                                  <div key={i} className="text-xs text-[#a1a1aa] bg-[#0a0a0a] rounded-lg px-3 py-1.5 border border-[#1e1e1e]">
+                                    {Object.entries(item).map(([k, v]) => (
+                                      <div key={k}><span className="text-[#52525b]">{k}:</span> {v}</div>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Translation (editable) */}
+                          <div className="p-3">
+                            <div className="text-[9px] text-[#52525b] mb-1 uppercase tracking-wider">
+                              {AVAILABLE_LANGUAGES.find(l => l.code === translationLang)?.label || translationLang}
+                            </div>
+                            {trans.type === 'string' && (
+                              <textarea
+                                value={currentTranslationEdited?.strings[trans.name] ?? trans.value}
+                                onChange={e => updateTranslationString(trans.name, e.target.value)}
+                                rows={Math.max(2, (trans.value as string).split('\n').length)}
+                                className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-xs rounded-lg px-3 py-2 placeholder-[#3f3f46] focus:outline-none focus:border-white/30 transition-colors resize-none"
+                              />
+                            )}
+                            {trans.type === 'string_array' && (
+                              <div className="space-y-1">
+                                {(currentTranslationEdited?.stringArrays[trans.name] ?? trans.items).map((item: string, i: number) => (
+                                  <input key={i} type="text" value={item}
+                                    onChange={e => {
+                                      const next = [...(currentTranslationEdited?.stringArrays[trans.name] ?? trans.items)]
+                                      next[i] = e.target.value
+                                      updateTranslationStringArray(trans.name, next)
+                                    }}
+                                    className="w-full bg-[#0a0a0a] border border-[#1e1e1e] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-white/30 transition-colors"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                            {trans.type === 'object_array' && (
+                              <div className="space-y-1.5">
+                                {(currentTranslationEdited?.objectArrays[trans.name] ?? trans.items).map((item: Record<string, string>, i: number) => (
+                                  <div key={i} className="bg-[#0a0a0a] rounded-lg px-3 py-1.5 border border-[#1e1e1e] space-y-1">
+                                    {(trans as CmsObjectArrayField).keys.map((key, ki) => (
+                                      <div key={key}>
+                                        <label className="text-[9px] text-[#52525b]">{(trans as CmsObjectArrayField).keyLabels[ki]}</label>
+                                        <input type="text" value={item[key] || ''}
+                                          onChange={e => {
+                                            const items = [...(currentTranslationEdited?.objectArrays[trans.name] ?? (trans as CmsObjectArrayField).items)]
+                                            items[i] = { ...items[i], [key]: e.target.value }
+                                            updateTranslationObjectArray(trans.name, items)
+                                          }}
+                                          className="w-full bg-[#0f0f0f] border border-[#1e1e1e] text-white text-xs rounded px-2 py-1 focus:outline-none focus:border-white/30 transition-colors"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )
-                  }
-                  return null
-                })
-              )}
-            </div>
+                  })
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

@@ -74,6 +74,37 @@ export interface CmsFieldUpdate {
   value: string | string[] | Record<string, string>[]
 }
 
+export interface TranslationPair {
+  baseField: CmsField
+  translatedField: CmsField | null
+}
+
+export interface TranslationSectionData {
+  section: CmsSection
+  pairs: TranslationPair[]
+}
+
+export interface TranslationAllData {
+  sections: TranslationSectionData[]
+}
+
+export const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'it', label: 'Italiano' },
+  { code: 'pt', label: 'Português' },
+  { code: 'nl', label: 'Nederlands' },
+  { code: 'ar', label: 'العربية' },
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'ko', label: '한국어' },
+  { code: 'ru', label: 'Русский' },
+  { code: 'pl', label: 'Polski' },
+  { code: 'tr', label: 'Türkçe' },
+  { code: 'ro', label: 'Română' },
+]
+
 // ─── Sites CRUD ───
 
 export async function getSites(): Promise<ClientSite[]> {
@@ -142,6 +173,20 @@ export async function getClientSite(): Promise<ClientSite | null> {
   }
 }
 
+/** Check if a field name is a translation variant (e.g. HERO_TITLE_en) */
+function getTranslationInfo(name: string): { baseName: string; lang: string } | null {
+  const match = name.match(/_([a-z]{2})$/)
+  if (!match) return null
+  const lang = match[1]
+  if (!LANG_CODES.has(lang)) return null
+  return { baseName: name.slice(0, -(lang.length + 1)), lang }
+}
+
+/** Check if a field value is an image path (should not be translated) */
+function isImageValue(value: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp|svg|avif|ico)(\?.*)?$/i.test(value)
+}
+
 // ─── Constants file parser ───
 
 async function loadConstants(siteId: string) {
@@ -159,6 +204,7 @@ interface ParsedField {
   type: 'string' | 'string_array' | 'object_array'
   value: string | string[] | Record<string, string>[]
   keys?: string[]
+  endLine: number  // line index where this field declaration ends
 }
 
 interface ParsedSection {
@@ -166,6 +212,9 @@ interface ParsedSection {
   key: string
   fields: ParsedField[]
 }
+
+// Known 2-letter language codes for translation suffix detection
+const LANG_CODES = new Set(['en', 'es', 'de', 'it', 'pt', 'nl', 'ar', 'zh', 'ja', 'ko', 'ru', 'pl', 'sv', 'da', 'fi', 'no', 'tr', 'ro', 'cs', 'hu', 'el', 'he', 'th', 'vi', 'uk', 'hr', 'bg', 'sk', 'sl', 'lt', 'lv', 'et', 'ca'])
 
 function parseConstantsFile(content: string): ParsedSection[] {
   const sections: ParsedSection[] = []
@@ -203,14 +252,14 @@ function parseConstantsFile(content: string): ParsedSection[] {
     // new URL("path", import.meta.url) or new URL("path", import.meta.url).href
     const urlMatch = line.match(/^export const \w+[^=]*=\s*new URL\(\s*["']([^"']+)["']\s*,/)
     if (urlMatch) {
-      current.fields.push({ name, type: 'string', value: urlMatch[1] })
+      current.fields.push({ name, type: 'string', value: urlMatch[1], endLine: i })
       continue
     }
 
     // Simple string: export const NAME = "value";
     const dqMatch = line.match(/^export const \w+[^=]*=\s*"((?:[^"\\]|\\.)*)"\s*;/)
     if (dqMatch) {
-      current.fields.push({ name, type: 'string', value: dqMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') })
+      current.fields.push({ name, type: 'string', value: dqMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'), endLine: i })
       continue
     }
 
@@ -232,7 +281,7 @@ function parseConstantsFile(content: string): ParsedSection[] {
           val += lines[j] + '\n'
         }
       }
-      current.fields.push({ name, type: 'string', value: val })
+      current.fields.push({ name, type: 'string', value: val, endLine: i })
       continue
     }
 
@@ -295,7 +344,7 @@ function parseConstantsFile(content: string): ParsedSection[] {
         }
 
         if (items.length > 0) {
-          current.fields.push({ name, type: 'object_array', value: items, keys: [...allKeys] })
+          current.fields.push({ name, type: 'object_array', value: items, keys: [...allKeys], endLine: i })
         }
       } else {
         // String array - extract items
@@ -306,7 +355,7 @@ function parseConstantsFile(content: string): ParsedSection[] {
           items.push(itemMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'))
         }
         if (items.length > 0) {
-          current.fields.push({ name, type: 'string_array', value: items })
+          current.fields.push({ name, type: 'string_array', value: items, endLine: i })
         }
       }
     }
@@ -355,7 +404,9 @@ export async function getAllCmsData(siteId: string): Promise<CmsAllData> {
   const parsed = parseConstantsFile(content)
 
   const sections = parsed.filter(s => s.fields.length > 0).map(s => {
-    const fields: CmsField[] = s.fields.map(f => {
+    // Filter out translation fields (e.g. HERO_TITLE_en) from the main view
+    const baseFields = s.fields.filter(f => !getTranslationInfo(f.name))
+    const fields: CmsField[] = baseFields.map(f => {
       if (f.type === 'string') {
         return { name: f.name, label: fieldLabel(f.name, s.key), type: 'string' as const, value: f.value as string }
       }
@@ -640,4 +691,151 @@ export async function getCmsImageUrls(
   } catch {
     return {}
   }
+}
+
+// ─── Translation ───
+
+/** Get list of languages that already have translations in the constants file */
+export async function getExistingTranslations(siteId: string): Promise<string[]> {
+  const { content } = await loadConstants(siteId)
+  const parsed = parseConstantsFile(content)
+  const langs = new Set<string>()
+  for (const section of parsed) {
+    for (const field of section.fields) {
+      const info = getTranslationInfo(field.name)
+      if (info) langs.add(info.lang)
+    }
+  }
+  return [...langs]
+}
+
+/** Get side-by-side translation data for a language */
+export async function getTranslationData(siteId: string, lang: string): Promise<TranslationAllData> {
+  const { content } = await loadConstants(siteId)
+  const parsed = parseConstantsFile(content)
+
+  const sections: TranslationSectionData[] = []
+
+  for (const s of parsed) {
+    const baseFields = s.fields.filter(f => !getTranslationInfo(f.name))
+    // Skip fields that are images (not translatable)
+    const translatableFields = baseFields.filter(f => {
+      if (f.type === 'string' && isImageValue(f.value as string)) return false
+      return true
+    })
+
+    if (translatableFields.length === 0) continue
+
+    const pairs: TranslationPair[] = translatableFields.map(base => {
+      const translatedName = `${base.name}_${lang}`
+      const translatedField = s.fields.find(f => f.name === translatedName)
+
+      const baseCms = toCmsField(base, s.key)
+
+      if (translatedField) {
+        return { baseField: baseCms, translatedField: toCmsField(translatedField, s.key) }
+      }
+      return { baseField: baseCms, translatedField: null }
+    })
+
+    sections.push({ section: { name: s.name, key: s.key }, pairs })
+  }
+
+  return { sections }
+}
+
+function toCmsField(f: ParsedField, sectionKey: string): CmsField {
+  if (f.type === 'string') {
+    return { name: f.name, label: fieldLabel(f.name, sectionKey), type: 'string', value: f.value as string }
+  }
+  if (f.type === 'string_array') {
+    return { name: f.name, label: fieldLabel(f.name, sectionKey), type: 'string_array', items: f.value as string[] }
+  }
+  const keys = f.keys || []
+  return {
+    name: f.name, label: fieldLabel(f.name, sectionKey), type: 'object_array',
+    keys, keyLabels: keys.map(k => keyLabel(k)), items: f.value as Record<string, string>[],
+  }
+}
+
+/** Generate the source code for a translated constant */
+function generateTranslatedConst(field: ParsedField, lang: string): string {
+  const name = `${field.name}_${lang}`
+  if (field.type === 'string') {
+    const val = field.value as string
+    if (val.includes('\n')) return `export const ${name} = \`${val}\`;`
+    return `export const ${name} = "${escapeForDoubleQuote(val)}";`
+  }
+  if (field.type === 'string_array') {
+    const items = field.value as string[]
+    const lines = items.map(item => `  "${escapeForDoubleQuote(item)}"`).join(',\n')
+    return `export const ${name}: string[] = [\n${lines},\n];`
+  }
+  // object_array
+  const items = field.value as Record<string, string>[]
+  const objLines = items.map(item => {
+    const fields = Object.entries(item).map(([k, v]) => {
+      if (v.includes('\n')) return `    ${k}: \`${v}\``
+      return `    ${k}: "${escapeForDoubleQuote(v)}"`
+    }).join(',\n')
+    return `  {\n${fields},\n  }`
+  }).join(',\n')
+  return `export const ${name} = [\n${objLines},\n];`
+}
+
+/** Initialize translation for a language: duplicate all base fields with _lang suffix */
+export async function initTranslation(
+  siteId: string,
+  lang: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { content, sha, path, repo, branch } = await loadConstants(siteId)
+    const parsed = parseConstantsFile(content)
+    const lines = content.split('\n')
+
+    // Collect all insertions: { afterLine, code }
+    const insertions: { afterLine: number; code: string }[] = []
+
+    for (const section of parsed) {
+      const baseFields = section.fields.filter(f => !getTranslationInfo(f.name))
+      for (const field of baseFields) {
+        // Skip images
+        if (field.type === 'string' && isImageValue(field.value as string)) continue
+        // Skip if translation already exists
+        const translatedName = `${field.name}_${lang}`
+        const alreadyExists = section.fields.some(f => f.name === translatedName)
+        if (alreadyExists) continue
+
+        const code = generateTranslatedConst(field, lang)
+        insertions.push({ afterLine: field.endLine, code })
+      }
+    }
+
+    if (insertions.length === 0) {
+      return { success: true } // already fully translated
+    }
+
+    // Insert from bottom to top to preserve line numbers
+    insertions.sort((a, b) => b.afterLine - a.afterLine)
+    for (const ins of insertions) {
+      lines.splice(ins.afterLine + 1, 0, ins.code)
+    }
+
+    const newContent = lines.join('\n')
+    await updateFileContent(repo, branch, path, newContent, sha, `cms: init translation ${lang}`)
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inconnue' }
+  }
+}
+
+/** Update translated fields (field names already include _lang suffix) */
+export async function updateTranslationFields(
+  siteId: string,
+  lang: string,
+  sectionKey: string,
+  updates: CmsFieldUpdate[]
+): Promise<{ success: boolean; error?: string }> {
+  // Translation fields have names like HERO_TITLE_en — we can reuse updateCmsFields
+  return updateCmsFields(siteId, sectionKey, updates)
 }
