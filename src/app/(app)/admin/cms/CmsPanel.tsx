@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { PlusIcon, TrashIcon, EditIcon, CheckIcon, XIcon, DocumentIcon, UploadIcon } from '@/components/ui/Icons'
 import {
   ClientSite, CmsSection, CmsField, CmsStringField, CmsStringArrayField, CmsObjectArrayField,
@@ -335,6 +335,12 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({})
   const repoRef = useRef<HTMLInputElement>(null)
 
+  // Visual mode state
+  const [viewMode, setViewMode] = useState<'fields' | 'visual'>('fields')
+  const [activeFieldPath, setActiveFieldPath] = useState<string | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [iframeReady, setIframeReady] = useState(false)
+
   // Translation state
   const [mode, setMode] = useState<'content' | 'translation'>('content')
   const [translationLang, setTranslationLang] = useState<string | null>(null)
@@ -422,6 +428,61 @@ export default function CmsPanel({ initialSites, projects }: Props) {
   useEffect(() => {
     if (showAddSite) repoRef.current?.focus()
   }, [showAddSite])
+
+  // Visual mode: parse CMS path -> section + field
+  const parseCmsPath = useCallback((path: string) => {
+    const dotIndex = path.indexOf('.')
+    if (dotIndex === -1) return null
+    return { sectionName: path.slice(0, dotIndex), fieldName: path.slice(dotIndex + 1) }
+  }, [])
+
+  // Visual mode: active field data
+  const activeFieldData = useMemo(() => {
+    if (!activeFieldPath || !allData) return null
+    const parsed = parseCmsPath(activeFieldPath)
+    if (!parsed) return null
+    const sectionData = allData.sections.find(s => s.section.name === parsed.sectionName)
+    if (!sectionData) return null
+    const field = sectionData.fields.find(f => f.name === parsed.fieldName)
+    if (!field) return null
+    return { section: sectionData.section, field }
+  }, [activeFieldPath, allData, parseCmsPath])
+
+  // Visual mode: listen for postMessage from iframe
+  useEffect(() => {
+    if (viewMode !== 'visual') return
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.type === 'cms:ready') {
+        setIframeReady(true)
+      }
+      if (e.data?.type === 'cms:field-click') {
+        const path = e.data.path as string
+        setActiveFieldPath(path)
+        const parsed = parseCmsPath(path)
+        if (parsed && allData) {
+          const section = allData.sections.find(s => s.section.name === parsed.sectionName)
+          if (section) setSelectedSection(section.section.key)
+        }
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [viewMode, allData, parseCmsPath])
+
+  // Visual mode: send field update to iframe
+  const sendToIframe = useCallback((path: string, value: string) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'cms:field-update', path, value }, '*')
+  }, [])
+
+  // Visual mode: update handlers that also send to iframe
+  const updateStringVisual = useCallback((name: string, value: string) => {
+    if (!selectedSection) return
+    setEditedPerSection(prev => ({
+      ...prev,
+      [selectedSection]: { ...prev[selectedSection], strings: { ...prev[selectedSection].strings, [name]: value } }
+    }))
+    if (activeFieldPath) sendToIframe(activeFieldPath, value)
+  }, [selectedSection, activeFieldPath, sendToIframe])
 
   const updateString = useCallback((name: string, value: string) => {
     if (!selectedSection) return
@@ -745,15 +806,29 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               <div className="flex items-center gap-0 px-5 pt-2">
                 <button
                   type="button"
-                  onClick={() => setMode('content')}
+                  onClick={() => { setMode('content'); setViewMode('fields') }}
                   className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-all cursor-pointer
-                    ${mode === 'content' ? 'text-white border-white' : 'text-[#52525b] border-transparent hover:text-[#a1a1aa]'}`}
+                    ${mode === 'content' && viewMode === 'fields' ? 'text-white border-white' : 'text-[#52525b] border-transparent hover:text-[#a1a1aa]'}`}
                 >
                   Contenu
                 </button>
+                {selectedSite?.site_url && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('content'); setViewMode('visual'); setIframeReady(false) }}
+                    className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5
+                      ${viewMode === 'visual' ? 'text-white border-white' : 'text-[#52525b] border-transparent hover:text-[#a1a1aa]'}`}
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Visuel
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => { setMode('translation'); if (translationLang) loadTranslation(translationLang) }}
+                  onClick={() => { setMode('translation'); setViewMode('fields'); if (translationLang) loadTranslation(translationLang) }}
                   className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-all cursor-pointer
                     ${mode === 'translation' ? 'text-white border-white' : 'text-[#52525b] border-transparent hover:text-[#a1a1aa]'}`}
                 >
@@ -761,8 +836,8 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                 </button>
               </div>
 
-              {/* Header bar */}
-              <div className="flex items-center justify-between px-5 py-2.5">
+              {/* Header bar (hidden in visual mode) */}
+              {viewMode !== 'visual' && <div className="flex items-center justify-between px-5 py-2.5">
                 <div className="flex items-center gap-3 min-w-0">
                   <DocumentIcon className="w-4 h-4 text-[#a1a1aa] shrink-0" />
                   <div className="text-sm font-medium text-white truncate">
@@ -818,11 +893,11 @@ export default function CmsPanel({ initialSites, projects }: Props) {
                     {saving ? 'Envoi...' : saveSuccess ? 'Publié !' : 'Publier'}
                   </button>
                 </div>
-              </div>
+              </div>}
             </div>
 
             {/* Content mode */}
-            {mode === 'content' && (
+            {mode === 'content' && viewMode === 'fields' && (
               <div className="flex-1 overflow-y-auto p-5 space-y-5">
                 {currentFields.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -860,8 +935,137 @@ export default function CmsPanel({ initialSites, projects }: Props) {
               </div>
             )}
 
+            {/* Visual mode */}
+            {viewMode === 'visual' && selectedSite?.site_url && (
+              <div className="flex-1 flex min-h-0">
+                {/* Iframe */}
+                <div className="flex-1 relative bg-[#0a0a0a]">
+                  {!iframeReady && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                        <span className="text-xs text-[#52525b]">Chargement du site...</span>
+                      </div>
+                    </div>
+                  )}
+                  <iframe
+                    ref={iframeRef}
+                    src={`${selectedSite.site_url}?edit=true`}
+                    className="w-full h-full border-none"
+                    onLoad={() => setIframeReady(true)}
+                  />
+                </div>
+
+                {/* Field editor panel */}
+                <div className="w-80 shrink-0 border-l border-[#1e1e1e] flex flex-col min-h-0 bg-[#0f0f0f]">
+                  <div className="px-4 py-3 border-b border-[#1e1e1e] shrink-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-semibold text-[#a1a1aa] uppercase tracking-widest">Édition</span>
+                      {activeFieldPath && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveFieldPath(null)}
+                          className="text-[#52525b] hover:text-white transition-colors cursor-pointer"
+                        >
+                          <XIcon className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    {activeFieldPath && (
+                      <div className="mt-1 text-[10px] text-[#52525b] font-mono truncate">{activeFieldPath}</div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {!activeFieldPath ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <svg className="w-8 h-8 text-[#1e1e1e] mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+                        </svg>
+                        <p className="text-[#a1a1aa] text-xs">Cliquez sur un texte du site</p>
+                        <p className="text-[#52525b] text-[10px] mt-1">pour le modifier ici</p>
+                      </div>
+                    ) : !activeFieldData ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <p className="text-[#a1a1aa] text-xs">Champ non trouvé</p>
+                        <p className="text-[#52525b] text-[10px] mt-1">{activeFieldPath}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="text-[10px] text-[#a1a1aa] font-medium">{activeFieldData.section.name}</div>
+                        {activeFieldData.field.type === 'string' && (() => {
+                          const sectionKey = activeFieldData.section.key
+                          const val = editedPerSection[sectionKey]?.strings[activeFieldData.field.name] ?? (activeFieldData.field as CmsStringField).value
+                          const isImage = isImageValue(val) || isImageValue((activeFieldData.field as CmsStringField).value)
+                          if (isImage) {
+                            return (
+                              <ImageFieldEditor
+                                field={activeFieldData.field as CmsStringField}
+                                value={val}
+                                onChange={v => updateStringVisual(activeFieldData.field.name, v)}
+                                previewUrl={imageUrls[val] || imageUrls[(activeFieldData.field as CmsStringField).value]}
+                                siteId={selectedSiteId!}
+                                onUploaded={(newPath, localPreview) => setImageUrls(prev => ({ ...prev, [newPath]: localPreview }))}
+                              />
+                            )
+                          }
+                          return (
+                            <StringFieldEditor
+                              field={activeFieldData.field as CmsStringField}
+                              value={val}
+                              onChange={v => updateStringVisual(activeFieldData.field.name, v)}
+                            />
+                          )
+                        })()}
+                        {activeFieldData.field.type === 'string_array' && (() => {
+                          const sectionKey = activeFieldData.section.key
+                          const items = editedPerSection[sectionKey]?.stringArrays[activeFieldData.field.name] ?? (activeFieldData.field as CmsStringArrayField).items
+                          return (
+                            <StringArrayFieldEditor
+                              field={activeFieldData.field as CmsStringArrayField}
+                              items={items}
+                              onChange={v => updateStringArray(activeFieldData.field.name, v)}
+                            />
+                          )
+                        })()}
+                        {activeFieldData.field.type === 'object_array' && (() => {
+                          const sectionKey = activeFieldData.section.key
+                          const items = editedPerSection[sectionKey]?.objectArrays[activeFieldData.field.name] ?? (activeFieldData.field as CmsObjectArrayField).items
+                          return (
+                            <ObjectArrayFieldEditor
+                              field={activeFieldData.field as CmsObjectArrayField}
+                              items={items}
+                              onChange={v => updateObjectArray(activeFieldData.field.name, v)}
+                            />
+                          )
+                        })()}
+
+                        {hasChanges && (
+                          <div className="flex items-center gap-2 pt-2 border-t border-[#1e1e1e]">
+                            <button type="button" onClick={handleReset}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-[11px] text-[#a1a1aa] hover:text-white py-2 rounded-lg border border-[#1e1e1e] hover:border-white/20 transition-all cursor-pointer">
+                              <XIcon className="w-3 h-3" /> Annuler
+                            </button>
+                            <button type="button" onClick={handleSave} disabled={saving}
+                              className={`flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium py-2 rounded-lg transition-all cursor-pointer
+                                ${saveSuccess
+                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                  : 'bg-white text-black hover:bg-white/90 disabled:opacity-30'}`}>
+                              {saving ? <div className="w-3 h-3 border-2 border-black/20 border-t-black/60 rounded-full animate-spin" />
+                                : <CheckIcon className="w-3 h-3" />}
+                              {saving ? 'Envoi...' : saveSuccess ? 'Publié !' : 'Publier'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Translation mode */}
-            {mode === 'translation' && (
+            {mode === 'translation' && viewMode === 'fields' && (
               <div className="flex-1 overflow-y-auto p-5 space-y-5">
                 {initializingLang ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
