@@ -37,6 +37,27 @@ export async function createProject(profileId: string, name: string): Promise<st
   return data.id
 }
 
+export async function linkProjectToProfile(projectId: string, profileId: string) {
+  const { admin } = await requireAdmin()
+  const { error } = await admin.from('projects').update({
+    profile_id: profileId,
+    updated_at: new Date().toISOString(),
+  }).eq('id', projectId)
+  if (error) throw new Error(error.message)
+  revalidatePath('/admin/projects')
+  revalidatePath(`/admin/users/${profileId}`)
+}
+
+export async function getUnlinkedProjects(profileId: string) {
+  const { admin } = await requireAdmin()
+  const { data } = await admin
+    .from('projects')
+    .select('id, name, profiles!projects_profile_id_fkey(full_name, email)')
+    .neq('profile_id', profileId)
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
 // Update an existing project by ID
 export async function updateProjectById(projectId: string, profileId: string, data: Partial<Project>) {
   const { admin } = await requireAdmin()

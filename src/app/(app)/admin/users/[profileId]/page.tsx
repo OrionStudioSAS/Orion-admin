@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StarIcon, FolderIcon } from '@/components/ui/Icons'
 import CreateProjectButton from './CreateProjectButton'
+import LinkProjectButton from './LinkProjectButton'
 
 interface Props {
   params: Promise<{ profileId: string }>
@@ -93,7 +94,10 @@ export default async function AdminUserProjectPage({ params }: Props) {
                 : `${projectList.length} projet${projectList.length > 1 ? 's' : ''}`}
             </div>
           </div>
-          <CreateProjectButton profileId={profileId} />
+          <div className="flex items-center gap-2">
+            <LinkProjectButton profileId={profileId} />
+            <CreateProjectButton profileId={profileId} />
+          </div>
         </div>
 
         {projectList.length === 0 ? (
